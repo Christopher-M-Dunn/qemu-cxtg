@@ -4127,6 +4127,8 @@ if host_os == 'darwin'
   entitlement = find_program('scripts/entitlement.sh')
 endif
 
+libmcx_selector_dep = cc.find_library('libmcx_selector', dirs: meson.current_source_dir() + '/../build-qemu/lib/', required: true)
+
 traceable = []
 emulators = {}
 foreach target : target_dirs
@@ -4134,7 +4136,7 @@ foreach target : target_dirs
   target_name = config_target['TARGET_NAME']
   target_base_arch = config_target['TARGET_BASE_ARCH']
   arch_srcs = [config_target_h[target]]
-  arch_deps = []
+  arch_deps = [libmcx_selector_dep]
   c_args = ['-DCOMPILING_PER_TARGET',
             '-DCONFIG_TARGET="@0@-config-target.h"'.format(target),
   ]

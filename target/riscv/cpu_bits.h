@@ -63,6 +63,12 @@
 #define CSR_VTYPE           0xc21
 #define CSR_VLENB           0xc22
 
+/* CX */
+#define CSR_MCX_TABLE      0x145 // should be BC1, but qemu doesn't like that
+#define CSR_CX_INDEX 0x011 // should be 800
+#define CSR_MCX_SELECTOR   0x012 // should be BC0
+#define CSR_CX_STATUS  0x801 // should be 801
+
 /* VCSR fields */
 #define VCSR_VXSAT_SHIFT    0
 #define VCSR_VXSAT          (0x1 << VCSR_VXSAT_SHIFT)

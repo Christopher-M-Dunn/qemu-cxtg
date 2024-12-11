@@ -1589,7 +1589,7 @@ probe_target_compiler() {
     case $1 in
       *-softmmu)
         if do_compiler "$target_cc" $target_cflags -o $TMPO -c $TMPC &&
-          do_compiler "$target_cc" $target_cflags -r -nostdlib -o "${TMPDIR1}/${TMPB}2.o" "$TMPO" -lgcc; then
+          do_compiler "$target_cc" $target_cflags -r -nostdlib -o "${TMPDIR1}/${TMPB}2.o" "$TMPO" -lgcc -lci; then
           got_cross_cc=yes
           break
         fi

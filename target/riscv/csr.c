@@ -32,6 +32,9 @@
 #include "qapi/error.h"
 #include <stdbool.h>
 
+// For memory instructions
+#include "exec/cpu_ldst.h"
+
 /* CSR function table public API */
 void riscv_get_csr_ops(int csrno, riscv_csr_operations *ops)
 {
@@ -5726,6 +5729,112 @@ static RISCVException write_jvt(CPURISCVState *env, int csrno,
     return RISCV_EXCP_NONE;
 }
 
+static RISCVException read_mcx_selector(CPURISCVState *env, int csrno,
+                                target_ulong *val)
+{
+    *val = env->mcx_selector;
+    return RISCV_EXCP_NONE;
+}
+
+static RISCVException write_mcx_selector(CPURISCVState *env, int csrno,
+                                 target_ulong val)
+{
+// #if !defined(CONFIG_USER_ONLY)
+//     env->mstatus |= MSTATUS_VS;
+// #endif
+    env->mcx_selector = val;
+    return RISCV_EXCP_NONE;
+}
+
+
+static RISCVException read_cx_status(CPURISCVState *env, int csrno,
+                                target_ulong *val)
+{
+    int prev_priv = env->priv;
+    if (prev_priv == PRV_S) {
+        riscv_cpu_set_mode(env, PRV_U, false);
+    }
+    *val = env->cx_status;
+    if (prev_priv == PRV_S) {
+        riscv_cpu_set_mode(env, PRV_S, false);
+    }
+    return RISCV_EXCP_NONE;
+}
+
+static RISCVException write_cx_status(CPURISCVState *env, int csrno,
+                                 target_ulong val)
+{
+// #if !defined(CONFIG_USER_ONLY)
+//     env->mstatus |= MSTATUS_VS;
+// #endif
+    int prev_priv = env->priv;
+    if (prev_priv == PRV_S) {
+        riscv_cpu_set_mode(env, PRV_U, false);
+    }
+    env->cx_status = val;
+    if (prev_priv == PRV_S) {
+        riscv_cpu_set_mode(env, PRV_S, false);
+    }
+    return RISCV_EXCP_NONE;
+}
+
+static RISCVException read_cx_index(CPURISCVState *env, int csrno,
+                                target_ulong *val)
+{
+    *val = env->cx_index;
+    return RISCV_EXCP_NONE;
+}
+
+static RISCVException write_cx_index(CPURISCVState *env, int csrno,
+                                 target_ulong val)
+{
+// #if !defined(CONFIG_USER_ONLY)
+//     env->mstatus |= MSTATUS_VS;
+// #endif
+
+    // TODO: Fix this. This deals with writing to cx_index in the case that
+    //       the mcx_table isn't initialized.
+    if (env->mcx_table < 0xc0000000) {
+        env->mcx_selector = 0;
+        return RISCV_EXCP_NONE;
+    }
+
+    env->cx_index = val;
+    int prev_priv = env->priv;
+
+    riscv_cpu_set_mode(env, PRV_S, false);
+    uintptr_t ra = GETPC();
+    int mmu_idx = riscv_env_mmu_index(env, true);
+    MemOpIdx oi = make_memop_idx(MO_32, mmu_idx);
+
+    // if the selector index is out of range, have an error
+    // or if it's bigger than the table size
+    // on git: can check branch on git for CX CSR approach
+    
+    target_ulong temp = cpu_ldl_mmu(env, env->mcx_table + val * 4, oi, ra);
+    riscv_cpu_set_mode(env, prev_priv, false);
+    env->mcx_selector = temp;
+
+    return RISCV_EXCP_NONE;
+}
+
+static RISCVException read_mcx_table(CPURISCVState *env, int csrno,
+                                target_ulong *val)
+{
+    *val = env->mcx_table;
+    return RISCV_EXCP_NONE;
+}
+
+static RISCVException write_mcx_table(CPURISCVState *env, int csrno,
+                                 target_ulong val)
+{
+// #if !defined(CONFIG_USER_ONLY)
+//     env->mstatus |= MSTATUS_VS;
+// #endif
+    env->mcx_table = val;
+    return RISCV_EXCP_NONE;
+}
+
 /*
  * Control and Status Register function table
  * riscv_csr_operations::predicate() must be provided for an implemented CSR
@@ -5761,6 +5870,14 @@ riscv_csr_operations csr_ops[CSR_TABLE_SIZE] = {
 
     /* Zcmt Extension */
     [CSR_JVT] = {"jvt", zcmt, read_jvt, write_jvt},
+    /* CX
+    * Note: This should be defined as a machine mode CSR, but I'm not sure how to
+    *       configure the build to allow machine mode
+    */
+    [CSR_MCX_SELECTOR] = { "mcx_selector", any, read_mcx_selector, write_mcx_selector },
+    [CSR_CX_INDEX] = { "cx_index", any, read_cx_index, write_cx_index },
+    [CSR_MCX_TABLE] =  { "mcx_table", any, read_mcx_table, write_mcx_table },
+    [CSR_CX_STATUS] =  { "cx_status", any, read_cx_status, write_cx_status },
 
     /* zicfiss Extension, shadow stack register */
     [CSR_SSP]  = { "ssp", cfi_ss, read_ssp, write_ssp },

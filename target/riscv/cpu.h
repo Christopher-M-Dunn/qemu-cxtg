@@ -216,6 +216,12 @@ struct CPUArchState {
     target_ulong vtype;
     bool vill;
 
+    /* CX */
+    uint32_t mcx_selector;
+    target_ulong mcx_table;
+    uint32_t cx_index;
+    uint32_t cx_status;
+
     target_ulong pc;
     target_ulong load_res;
     target_ulong load_val;

@@ -28,6 +28,9 @@
 #include "system/replay.h"
 #include "system/system.h"
 
+#include "../../../../zoo/exports.h"
+#include <stdio.h>
+
 #ifdef CONFIG_SDL
 /*
  * SDL insists on wrapping the main() function with its own implementation on
@@ -43,10 +46,15 @@
 
 static void *qemu_default_main(void *opaque)
 {
+    printf("initializing cx function pointers...\n");
+    cx_init_funcs();
     int status;
+<<<<<<< HEAD
 
     replay_mutex_lock();
     bql_lock();
+=======
+>>>>>>> 37da7f93fa (Initial commit for table)
     status = qemu_main_loop();
     qemu_cleanup(status);
     bql_unlock();
