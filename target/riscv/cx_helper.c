@@ -60,7 +60,8 @@ target_ulong HELPER(cx_reg)(CPURISCVState *env, target_ulong cf_id,
     
     assert( CX_ID < MAX_CX_ID); // Possibly redundant
 
-    int32_t out = cx_funcs[CX_ID][OPCODE_ID](OPA, OPB, STATE_ID);
+    cx_selidx_t sys_sel = {.idx = env->mcx_selector};
+    int32_t out = cx_funcs[CX_ID][OPCODE_ID](OPA, OPB, sys_sel);
 
     return (target_ulong)out;
 } 
