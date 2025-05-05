@@ -607,6 +607,14 @@
 /* Zcmt Extension */
 #define CSR_JVT             0x017
 
+/* CX Extension */
+#define CSR_CXSEL           0x7c1 // TBD
+
+/* CXSEL CSR bits */
+#define CXSEL_INV           0x80000000
+#define CXSEL_TYPE          0x70000000
+#define CXSEL_SEL           0x0FFFFFFF
+
 /* mstatus CSR bits */
 #define MSTATUS_UIE         0x00000001
 #define MSTATUS_SIE         0x00000002

@@ -2443,6 +2443,7 @@ static const char *csr_name(int csrno)
     case 0x07b1: return "dpc";
     case 0x07b2: return "dscratch0";
     case 0x07b3: return "dscratch1";
+    case 0x07c1: return "cxsel";  // address TBD
     case 0x0b00: return "mcycle";
     case 0x0b01: return "mtime";
     case 0x0b02: return "minstret";

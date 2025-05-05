@@ -1430,6 +1430,21 @@ static RISCVException read_hpmcounterh(CPURISCVState *env, int csrno,
     return riscv_pmu_read_ctr(env, val, true, ctr_index);
 }
 
+/* WARL sematics:
+ * - Privilege: U - User Level 
+ * - WARL fields may silently ignore writes of unsupported values and retain previous settings, or coerce the value into a supported setting.
+ * - Valid selector values are 0
+ * - A value of all 1s is an invalid selector value => 0xFFFF_FFFF
+ * - The value of cxsel is 0 at reset.
+ * 
+ * CX multiplexing
+ * 
+ * - When cxsel is 0, CX instructions are executed by the built-in custom extension.
+ * - When cxsel is any other valid value, CX instructions are executed by the selected extension.
+ * - When cxsel is invalid, CX instructions are treated as illegal instructions.
+ * 
+ */
+
 static RISCVException read_cxsel(CPURISCVState *env, int csrno,
                                        target_ulong *val)
 {
@@ -1440,7 +1455,6 @@ static RISCVException read_cxsel(CPURISCVState *env, int csrno,
 static RISCVException write_cxsel(CPURISCVState *env, int csrno,
                                        target_ulong new_value, uintptr_t ra)
 {
-    // TODO
     return RISCV_EXCP_NONE;
 }
 
@@ -5810,6 +5824,25 @@ bool riscv_csr_is_vpu(int csrno)
     return csr_ops[csrno].predicate == vs;
 }
 
+static RISCVException cxsel(CPURISCVState *env, int csrno)
+{
+    if (riscv_cpu_cfg(env)->ext_zicx) {
+////////////
+        if (csrno <= CSR_PMPCFG3) {
+            uint32_t reg_index = csrno - CSR_PMPCFG0;
+
+            /* TODO: RV128 restriction check */
+            if ((reg_index & 1) && (riscv_cpu_mxl(env) == MXL_RV64)) {
+                return RISCV_EXCP_ILLEGAL_INST;
+            }
+        }
+///////////////
+        return RISCV_EXCP_NONE;
+    }
+
+    return RISCV_EXCP_ILLEGAL_INST;
+}
+
 /*
  * Control and Status Register function table
  * riscv_csr_operations::predicate() must be provided for an implemented CSR
@@ -6674,6 +6707,9 @@ riscv_csr_operations csr_ops[CSR_TABLE_SIZE] = {
                              write_mhpmcounterh                         },
     [CSR_SCOUNTOVF]      = { "scountovf", sscofpmf,  read_scountovf,
                              .min_priv_ver = PRIV_VERSION_1_12_0 },
+
+    /* CX extension CSRs */
+    [CSR_CXSEL]          = { "cxsel", cxsel, read_cxsel, write_cxsel },
 
 #endif /* !CONFIG_USER_ONLY */
 };
