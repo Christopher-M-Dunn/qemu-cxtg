@@ -993,6 +993,13 @@ int qdev_prop_check_globals(void)
         DeviceClass *dc;
 
         prop = g_ptr_array_index(global_props(), i);
+
+        printf("# prop->driver: %s\n", prop->driver);
+        printf("# prop->property: %s\n", prop->driver);
+        printf("# prop->value: %s\n", prop->value);
+        printf("\n");
+
+
         if (prop->used) {
             continue;
         }

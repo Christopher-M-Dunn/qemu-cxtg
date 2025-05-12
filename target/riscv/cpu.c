@@ -796,6 +796,14 @@ static void riscv_cpu_reset_hold(Object *obj, ResetType type)
         kvm_riscv_reset_vcpu(cpu);
     }
 #endif
+
+    if (riscv_cpu_cfg(env)->ext_zicx) {
+        env->cxsel = 0;
+        qemu_printf("# Zicx SET! [HART=%d]\n", (int)env->mhartid);
+        // env->hartid
+    } else {
+        qemu_printf("# Zicx NOT SET! [HART=%d]\n", (int)env->mhartid);
+    }
 }
 
 static void riscv_cpu_disas_set_info(const CPUState *s, disassemble_info *info)
@@ -1146,6 +1154,7 @@ static void riscv_cpu_init(Object *obj)
 #endif
 
     accel_cpu_instance_init(CPU(obj));
+
 }
 
 typedef struct misa_ext_info {

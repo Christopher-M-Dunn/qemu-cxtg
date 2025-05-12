@@ -178,6 +178,8 @@ static void cpu_common_parse_features(const char *typename, char *features,
     /* Single "key=value" string being parsed */
     char *featurestr = features ? strtok(features, ",") : NULL;
 
+    printf("# feature string: %s\n", featurestr == NULL ? "NULL" : featurestr);
+    
     /* should be called only once, catch invalid users */
     assert(!cpu_globals_initialized);
     cpu_globals_initialized = true;

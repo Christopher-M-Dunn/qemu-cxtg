@@ -2939,6 +2939,7 @@ void qemu_init(int argc, char **argv)
             case QEMU_OPTION_cpu:
                 /* hw initialization will check this */
                 cpu_option = optarg;
+                printf("# cpu option: %s\n", cpu_option);
                 break;
             case QEMU_OPTION_hda:
             case QEMU_OPTION_hdb:

@@ -461,6 +461,8 @@ static void kvm_riscv_update_cpu_cfg_isa_ext(RISCVCPU *cpu, CPUState *cs)
     for (i = 0; i < ARRAY_SIZE(kvm_multi_ext_cfgs); i++) {
         KVMCPUConfig *multi_ext_cfg = &kvm_multi_ext_cfgs[i];
 
+        printf("# multi_ext_cfg->name : %s\n", multi_ext_cfg->name);
+
         if (!multi_ext_cfg->user_set) {
             continue;
         }
@@ -549,6 +551,8 @@ static void kvm_riscv_add_cpu_user_properties(Object *cpu_obj)
         int bit = misa_cfg->offset;
 
         misa_cfg->name = riscv_get_misa_ext_name(bit);
+        printf("# misa_cfg->name : %s", misa_cfg->name);
+
         misa_cfg->description = riscv_get_misa_ext_description(bit);
 
         object_property_add(cpu_obj, misa_cfg->name, "bool",
@@ -561,11 +565,13 @@ static void kvm_riscv_add_cpu_user_properties(Object *cpu_obj)
 
     for (i = 0; misa_bits[i] != 0; i++) {
         const char *ext_name = riscv_get_misa_ext_name(misa_bits[i]);
+        printf("# ext_name : %s", ext_name);
         riscv_cpu_add_kvm_unavail_prop(cpu_obj, ext_name);
     }
 
     for (i = 0; i < ARRAY_SIZE(kvm_multi_ext_cfgs); i++) {
         KVMCPUConfig *multi_cfg = &kvm_multi_ext_cfgs[i];
+        printf("# multi_cfg->name : %s\n", multi_cfg->name);
 
         object_property_add(cpu_obj, multi_cfg->name, "bool",
                             kvm_cpu_get_multi_ext_cfg,
