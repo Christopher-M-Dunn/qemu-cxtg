@@ -1430,6 +1430,20 @@ static RISCVException read_hpmcounterh(CPURISCVState *env, int csrno,
     return riscv_pmu_read_ctr(env, val, true, ctr_index);
 }
 
+static RISCVException read_cxsel(CPURISCVState *env, int csrno,
+                                       target_ulong *val)
+{
+    // TODO
+    return RISCV_EXCP_NONE;
+}
+
+static RISCVException write_cxsel(CPURISCVState *env, int csrno,
+                                       target_ulong new_value, uintptr_t ra)
+{
+    // TODO
+    return RISCV_EXCP_NONE;
+}
+
 static int rmw_cd_mhpmcounter(CPURISCVState *env, int ctr_idx,
                               target_ulong *val, target_ulong new_val,
                               target_ulong wr_mask)
