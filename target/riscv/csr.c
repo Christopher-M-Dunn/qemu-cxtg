@@ -1452,10 +1452,49 @@ static RISCVException read_cxsel(CPURISCVState *env, int csrno,
     return RISCV_EXCP_NONE;
 }
 
+static RISCVException read_cxsetsel(CPURISCVState *env, int csrno,
+                                       target_ulong *val)
+{
+    // TODO
+    return RISCV_EXCP_NONE;
+}
+
+static RISCVException read_cxidx(CPURISCVState *env, int csrno,
+                                       target_ulong *val)
+{
+    // TODO
+    return RISCV_EXCP_NONE;
+}
+
+static RISCVException read_cxdata(CPURISCVState *env, int csrno,
+                                       target_ulong *val)
+{
+    // TODO
+    return RISCV_EXCP_NONE;
+}
+
 static RISCVException write_cxsel(CPURISCVState *env, int csrno,
                                        target_ulong new_value, uintptr_t ra)
 {
-    return RISCV_EXCP_NONE;
+    return RISCV_EXCP_ILLEGAL_INST;
+}
+
+static RISCVException write_cxsetsel(CPURISCVState *env, int csrno,
+                                       target_ulong new_value, uintptr_t ra)
+{
+    return RISCV_EXCP_ILLEGAL_INST;
+}
+
+static RISCVException write_cxidx(CPURISCVState *env, int csrno,
+                                       target_ulong new_value, uintptr_t ra)
+{
+    return RISCV_EXCP_ILLEGAL_INST;
+}
+
+static RISCVException write_cxdata(CPURISCVState *env, int csrno,
+                                       target_ulong new_value, uintptr_t ra)
+{
+    return RISCV_EXCP_ILLEGAL_INST;
 }
 
 static int rmw_cd_mhpmcounter(CPURISCVState *env, int ctr_idx,
@@ -5843,6 +5882,63 @@ static RISCVException cxsel(CPURISCVState *env, int csrno)
     return RISCV_EXCP_ILLEGAL_INST;
 }
 
+static RISCVException cxsetsel(CPURISCVState *env, int csrno)
+{
+    if (riscv_cpu_cfg(env)->ext_zicx) {
+////////////
+        if (csrno <= CSR_PMPCFG3) {
+            uint32_t reg_index = csrno - CSR_PMPCFG0;
+
+            /* TODO: RV128 restriction check */
+            if ((reg_index & 1) && (riscv_cpu_mxl(env) == MXL_RV64)) {
+                return RISCV_EXCP_ILLEGAL_INST;
+            }
+        }
+///////////////
+        return RISCV_EXCP_NONE;
+    }
+
+    return RISCV_EXCP_ILLEGAL_INST;
+}
+
+static RISCVException cxidx(CPURISCVState *env, int csrno)
+{
+    if (riscv_cpu_cfg(env)->ext_zicx) {
+////////////
+        if (csrno <= CSR_PMPCFG3) {
+            uint32_t reg_index = csrno - CSR_PMPCFG0;
+
+            /* TODO: RV128 restriction check */
+            if ((reg_index & 1) && (riscv_cpu_mxl(env) == MXL_RV64)) {
+                return RISCV_EXCP_ILLEGAL_INST;
+            }
+        }
+///////////////
+        return RISCV_EXCP_NONE;
+    }
+
+    return RISCV_EXCP_ILLEGAL_INST;
+}
+
+static RISCVException cxdata(CPURISCVState *env, int csrno)
+{
+    if (riscv_cpu_cfg(env)->ext_zicx) {
+////////////
+        if (csrno <= CSR_PMPCFG3) {
+            uint32_t reg_index = csrno - CSR_PMPCFG0;
+
+            /* TODO: RV128 restriction check */
+            if ((reg_index & 1) && (riscv_cpu_mxl(env) == MXL_RV64)) {
+                return RISCV_EXCP_ILLEGAL_INST;
+            }
+        }
+///////////////
+        return RISCV_EXCP_NONE;
+    }
+
+    return RISCV_EXCP_ILLEGAL_INST;
+}
+
 /*
  * Control and Status Register function table
  * riscv_csr_operations::predicate() must be provided for an implemented CSR
@@ -6710,6 +6806,9 @@ riscv_csr_operations csr_ops[CSR_TABLE_SIZE] = {
 
     /* CX extension CSRs */
     [CSR_CXSEL]          = { "cxsel", cxsel, read_cxsel, write_cxsel },
+    [CSR_CXSETSEL]       = { "cxsetsel", cxsetsel, read_cxsetsel, write_cxsetsel },
+    [CSR_CXIDX]          = { "cxidx", cxidx, read_cxidx, write_cxidx },
+    [CSR_CXDATA]         = { "cxdata", cxdata, read_cxdata, write_cxdata },
 
 #endif /* !CONFIG_USER_ONLY */
 };

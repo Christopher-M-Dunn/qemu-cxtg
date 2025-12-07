@@ -2443,7 +2443,11 @@ static const char *csr_name(int csrno)
     case 0x07b1: return "dpc";
     case 0x07b2: return "dscratch0";
     case 0x07b3: return "dscratch1";
-    case 0x07c1: return "cxsel";  // address TBD
+
+    case 0x0800: return "cxsetsel"; // Unprivileged (User), Custom read-only (64 CSRs)
+    case 0x0801: return "cxidx"; // Unprivileged (User), Custom read-write (64 CSRs)
+    case 0x0802: return "cxdata"; // Unprivileged (User), Custom read-write (64 CSRs)
+    
     case 0x0b00: return "mcycle";
     case 0x0b01: return "mtime";
     case 0x0b02: return "minstret";
@@ -2517,6 +2521,9 @@ static const char *csr_name(int csrno)
     case 0x0c80: return "cycleh";
     case 0x0c81: return "timeh";
     case 0x0c82: return "instreth";
+    
+    case 0x0cc0: return "cxsel";  // Unprivileged (User), Custom read-only (64 CSRs)
+    
     case 0x0d00: return "scycle";
     case 0x0d01: return "stime";
     case 0x0d02: return "sinstret";

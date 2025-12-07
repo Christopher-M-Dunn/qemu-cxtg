@@ -608,12 +608,16 @@
 #define CSR_JVT             0x017
 
 /* CX Extension */
-#define CSR_CXSEL           0x7c1 // TBD
+#define CSR_CXSEL           0x0cc0
 
 /* CXSEL CSR bits */
 #define CXSEL_INV           0x80000000
 #define CXSEL_TYPE          0x70000000
 #define CXSEL_SEL           0x0FFFFFFF
+
+#define CSR_CXSETSEL        0x800
+#define CSR_CXIDX           0x801
+#define CSR_CXDATA          0x802
 
 /* mstatus CSR bits */
 #define MSTATUS_UIE         0x00000001
