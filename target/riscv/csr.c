@@ -1448,53 +1448,57 @@ static RISCVException read_hpmcounterh(CPURISCVState *env, int csrno,
 static RISCVException read_cxsel(CPURISCVState *env, int csrno,
                                        target_ulong *val)
 {
-    // TODO
+    cxsel_csr_read(env, csrno, *val);
     return RISCV_EXCP_NONE;
 }
 
 static RISCVException read_cxsetsel(CPURISCVState *env, int csrno,
                                        target_ulong *val)
 {
-    // TODO
+    cxsetsel_csr_read(env, csrno, *val);
     return RISCV_EXCP_NONE;
 }
 
 static RISCVException read_cxidx(CPURISCVState *env, int csrno,
                                        target_ulong *val)
 {
-    // TODO
+    cxidx_csr_read(env, csrno, *val);
     return RISCV_EXCP_NONE;
 }
 
 static RISCVException read_cxdata(CPURISCVState *env, int csrno,
                                        target_ulong *val)
 {
-    // TODO
+    cxdata_csr_read(env, csrno, *val);
     return RISCV_EXCP_NONE;
 }
 
 static RISCVException write_cxsel(CPURISCVState *env, int csrno,
                                        target_ulong new_value, uintptr_t ra)
 {
+    cxsel_csr_write(env, csrno, new_value);
     return RISCV_EXCP_ILLEGAL_INST;
 }
 
 static RISCVException write_cxsetsel(CPURISCVState *env, int csrno,
                                        target_ulong new_value, uintptr_t ra)
 {
-    return RISCV_EXCP_ILLEGAL_INST;
+    cxsetsel_csr_write(env, csrno, new_value);
+    return RISCV_EXCP_NONE;
 }
 
 static RISCVException write_cxidx(CPURISCVState *env, int csrno,
                                        target_ulong new_value, uintptr_t ra)
 {
-    return RISCV_EXCP_ILLEGAL_INST;
+    cxidx_csr_write(env, csrno, new_value);
+    return RISCV_EXCP_NONE;
 }
 
 static RISCVException write_cxdata(CPURISCVState *env, int csrno,
                                        target_ulong new_value, uintptr_t ra)
 {
-    return RISCV_EXCP_ILLEGAL_INST;
+    cxdata_csr_write(env, csrno, new_value);
+    return RISCV_EXCP_NONE;
 }
 
 static int rmw_cd_mhpmcounter(CPURISCVState *env, int ctr_idx,

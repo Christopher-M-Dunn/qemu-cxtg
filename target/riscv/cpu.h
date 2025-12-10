@@ -180,6 +180,7 @@ extern RISCVCPUImpliedExtsRule *riscv_multi_ext_implied_rules[];
 
 #if !defined(CONFIG_USER_ONLY)
 #include "pmp.h"
+#include "cx.h"
 #include "debug.h"
 #endif
 
