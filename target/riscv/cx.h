@@ -23,16 +23,16 @@
 
 #include "cpu.h"
 
-void cxsel_csr_read(CPURISCVState *env, uint32_t reg_index, target_ulong val);
+void cxsel_csr_read(CPURISCVState *env, uint32_t reg_index, target_ulong *val);
 void cxsel_csr_write(CPURISCVState *env, uint32_t reg_index, target_ulong val);
 
-void cxsetsel_csr_read(CPURISCVState *env, uint32_t reg_index, target_ulong val);
+void cxsetsel_csr_read(CPURISCVState *env, uint32_t reg_index, target_ulong *val);
 void cxsetsel_csr_write(CPURISCVState *env, uint32_t reg_index, target_ulong val);
 
-void cxidx_csr_read(CPURISCVState *env, uint32_t reg_index, target_ulong val);
+void cxidx_csr_read(CPURISCVState *env, uint32_t reg_index, target_ulong *val);
 void cxidx_csr_write(CPURISCVState *env, uint32_t reg_index, target_ulong val);
 
-void cxdata_csr_read(CPURISCVState *env, uint32_t reg_index, target_ulong val);
+void cxdata_csr_read(CPURISCVState *env, uint32_t reg_index, target_ulong *val);
 void cxdata_csr_write(CPURISCVState *env, uint32_t reg_index, target_ulong val);
 
 #endif /* RISCV_CX_H */

@@ -15,10 +15,10 @@ riscv_exception(uint32_t exception, const char *desc, uint64_t epc) "%u (%s) on 
 
 # cx.c
 cxsel_csr_read(uint64_t mhartid, uint32_t addr_index, uint64_t val) "hart %" PRIu64 ": read reg %" PRIu32", val: 0x%" PRIx64
-cxsel_csr_write(uint64_t mhartid, uint32_t addr_index, uint64_t val) "hart %" PRIu64 ": read reg %" PRIu32", val: 0x%" PRIx64
+cxsel_csr_write(uint64_t mhartid, uint32_t addr_index, uint64_t val) "hart %" PRIu64 ": write reg %" PRIu32", val: 0x%" PRIx64
 cxsetsel_csr_read(uint64_t mhartid, uint32_t addr_index, uint64_t val) "hart %" PRIu64 ": read reg %" PRIu32", val: 0x%" PRIx64
-cxsetsel_csr_write(uint64_t mhartid, uint32_t addr_index, uint64_t val) "hart %" PRIu64 ": read reg %" PRIu32", val: 0x%" PRIx64
+cxsetsel_csr_write(uint64_t mhartid, uint32_t addr_index, uint64_t val) "hart %" PRIu64 ": write reg %" PRIu32", val: 0x%" PRIx64
 cxidx_csr_read(uint64_t mhartid, uint32_t addr_index, uint64_t val) "hart %" PRIu64 ": read reg %" PRIu32", val: 0x%" PRIx64
-cxidx_csr_write(uint64_t mhartid, uint32_t addr_index, uint64_t val) "hart %" PRIu64 ": read reg %" PRIu32", val: 0x%" PRIx64
+cxidx_csr_write(uint64_t mhartid, uint32_t addr_index, uint64_t val) "hart %" PRIu64 ": write reg %" PRIu32", val: 0x%" PRIx64
 cxdata_csr_read(uint64_t mhartid, uint32_t addr_index, uint64_t val) "hart %" PRIu64 ": read reg %" PRIu32", val: 0x%" PRIx64
-cxdata_csr_write(uint64_t mhartid, uint32_t addr_index, uint64_t val) "hart %" PRIu64 ": read reg %" PRIu32", val: 0x%" PRIx64
+cxdata_csr_write(uint64_t mhartid, uint32_t addr_index, uint64_t val) "hart %" PRIu64 ": write reg %" PRIu32", val: 0x%" PRIx64

@@ -1448,28 +1448,28 @@ static RISCVException read_hpmcounterh(CPURISCVState *env, int csrno,
 static RISCVException read_cxsel(CPURISCVState *env, int csrno,
                                        target_ulong *val)
 {
-    cxsel_csr_read(env, csrno, *val);
+    cxsel_csr_read(env, csrno, val);
     return RISCV_EXCP_NONE;
 }
 
 static RISCVException read_cxsetsel(CPURISCVState *env, int csrno,
                                        target_ulong *val)
 {
-    cxsetsel_csr_read(env, csrno, *val);
+    cxsetsel_csr_read(env, csrno, val);
     return RISCV_EXCP_NONE;
 }
 
 static RISCVException read_cxidx(CPURISCVState *env, int csrno,
                                        target_ulong *val)
 {
-    cxidx_csr_read(env, csrno, *val);
+    cxidx_csr_read(env, csrno, val);
     return RISCV_EXCP_NONE;
 }
 
 static RISCVException read_cxdata(CPURISCVState *env, int csrno,
                                        target_ulong *val)
 {
-    cxdata_csr_read(env, csrno, *val);
+    cxdata_csr_read(env, csrno, val);
     return RISCV_EXCP_NONE;
 }
 
