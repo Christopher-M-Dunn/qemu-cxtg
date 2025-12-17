@@ -34,38 +34,26 @@ void cxsel_csr_write(CPURISCVState *env, uint32_t reg_index, target_ulong val)
     // Note: CSR cxsel is read-only!
 }
 
-void cxsetsel_csr_read(CPURISCVState *env, uint32_t reg_index, target_ulong *val)
-{
-    *val = env->cxsetsel;
-    trace_cxsetsel_csr_read(env->mhartid, reg_index, *val);
-}
-
-void cxsetsel_csr_write(CPURISCVState *env, uint32_t reg_index, target_ulong val)
-{
-    env->cxsetsel = val;
-    trace_cxsetsel_csr_write(env->mhartid, reg_index, val);
-}
-
-void cxidx_csr_read(CPURISCVState *env, uint32_t reg_index, target_ulong *val)
+void cxsidx_csr_read(CPURISCVState *env, uint32_t reg_index, target_ulong *val)
 {
     *val = env->cxidx;
-    trace_cxidx_csr_read(env->mhartid, reg_index, *val);
+    trace_cxsidx_csr_read(env->mhartid, reg_index, *val);
 }
 
-void cxidx_csr_write(CPURISCVState *env, uint32_t reg_index, target_ulong val)
+void cxsidx_csr_write(CPURISCVState *env, uint32_t reg_index, target_ulong val)
 {
     env->cxidx = val;
-    trace_cxidx_csr_write(env->mhartid, reg_index, val);
+    trace_cxsidx_csr_write(env->mhartid, reg_index, val);
 }
 
-void cxdata_csr_read(CPURISCVState *env, uint32_t reg_index, target_ulong *val)
+void cxsdata_csr_read(CPURISCVState *env, uint32_t reg_index, target_ulong *val)
 {
     *val = env->cxdata;
-    trace_cxdata_csr_read(env->mhartid, reg_index, *val);
+    trace_cxsdata_csr_read(env->mhartid, reg_index, *val);
 }
 
-void cxdata_csr_write(CPURISCVState *env, uint32_t reg_index, target_ulong val)
+void cxsdata_csr_write(CPURISCVState *env, uint32_t reg_index, target_ulong val)
 {
     env->cxdata = val;
-    trace_cxdata_csr_write(env->mhartid, reg_index, val);
+    trace_cxsdata_csr_write(env->mhartid, reg_index, val);
 }

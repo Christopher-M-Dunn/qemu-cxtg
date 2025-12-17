@@ -1452,24 +1452,17 @@ static RISCVException read_cxsel(CPURISCVState *env, int csrno,
     return RISCV_EXCP_NONE;
 }
 
-static RISCVException read_cxsetsel(CPURISCVState *env, int csrno,
+static RISCVException read_cxsidx(CPURISCVState *env, int csrno,
                                        target_ulong *val)
 {
-    cxsetsel_csr_read(env, csrno, val);
+    cxsidx_csr_read(env, csrno, val);
     return RISCV_EXCP_NONE;
 }
 
-static RISCVException read_cxidx(CPURISCVState *env, int csrno,
+static RISCVException read_cxsdata(CPURISCVState *env, int csrno,
                                        target_ulong *val)
 {
-    cxidx_csr_read(env, csrno, val);
-    return RISCV_EXCP_NONE;
-}
-
-static RISCVException read_cxdata(CPURISCVState *env, int csrno,
-                                       target_ulong *val)
-{
-    cxdata_csr_read(env, csrno, val);
+    cxsdata_csr_read(env, csrno, val);
     return RISCV_EXCP_NONE;
 }
 
@@ -1480,24 +1473,17 @@ static RISCVException write_cxsel(CPURISCVState *env, int csrno,
     return RISCV_EXCP_ILLEGAL_INST;
 }
 
-static RISCVException write_cxsetsel(CPURISCVState *env, int csrno,
+static RISCVException write_cxsidx(CPURISCVState *env, int csrno,
                                        target_ulong new_value, uintptr_t ra)
 {
-    cxsetsel_csr_write(env, csrno, new_value);
+    cxsidx_csr_write(env, csrno, new_value);
     return RISCV_EXCP_NONE;
 }
 
-static RISCVException write_cxidx(CPURISCVState *env, int csrno,
+static RISCVException write_cxsdata(CPURISCVState *env, int csrno,
                                        target_ulong new_value, uintptr_t ra)
 {
-    cxidx_csr_write(env, csrno, new_value);
-    return RISCV_EXCP_NONE;
-}
-
-static RISCVException write_cxdata(CPURISCVState *env, int csrno,
-                                       target_ulong new_value, uintptr_t ra)
-{
-    cxdata_csr_write(env, csrno, new_value);
+    cxsdata_csr_write(env, csrno, new_value);
     return RISCV_EXCP_NONE;
 }
 
@@ -5886,7 +5872,7 @@ static RISCVException cxsel(CPURISCVState *env, int csrno)
     return RISCV_EXCP_ILLEGAL_INST;
 }
 
-static RISCVException cxsetsel(CPURISCVState *env, int csrno)
+static RISCVException cxsidx(CPURISCVState *env, int csrno)
 {
     if (riscv_cpu_cfg(env)->ext_zicx) {
 ////////////
@@ -5905,26 +5891,7 @@ static RISCVException cxsetsel(CPURISCVState *env, int csrno)
     return RISCV_EXCP_ILLEGAL_INST;
 }
 
-static RISCVException cxidx(CPURISCVState *env, int csrno)
-{
-    if (riscv_cpu_cfg(env)->ext_zicx) {
-////////////
-        if (csrno <= CSR_PMPCFG3) {
-            uint32_t reg_index = csrno - CSR_PMPCFG0;
-
-            /* TODO: RV128 restriction check */
-            if ((reg_index & 1) && (riscv_cpu_mxl(env) == MXL_RV64)) {
-                return RISCV_EXCP_ILLEGAL_INST;
-            }
-        }
-///////////////
-        return RISCV_EXCP_NONE;
-    }
-
-    return RISCV_EXCP_ILLEGAL_INST;
-}
-
-static RISCVException cxdata(CPURISCVState *env, int csrno)
+static RISCVException cxsdata(CPURISCVState *env, int csrno)
 {
     if (riscv_cpu_cfg(env)->ext_zicx) {
 ////////////
@@ -6810,9 +6777,8 @@ riscv_csr_operations csr_ops[CSR_TABLE_SIZE] = {
 
     /* CX extension CSRs */
     [CSR_CXSEL]          = { "cxsel", cxsel, read_cxsel, write_cxsel },
-    [CSR_CXSETSEL]       = { "cxsetsel", cxsetsel, read_cxsetsel, write_cxsetsel },
-    [CSR_CXIDX]          = { "cxidx", cxidx, read_cxidx, write_cxidx },
-    [CSR_CXDATA]         = { "cxdata", cxdata, read_cxdata, write_cxdata },
+    [CSR_CXSIDX]         = { "cxsidx", cxsidx, read_cxsidx, write_cxsidx },
+    [CSR_CXSDATA]        = { "cxsdata", cxsdata, read_cxsdata, write_cxsdata },
 
 #endif /* !CONFIG_USER_ONLY */
 };
