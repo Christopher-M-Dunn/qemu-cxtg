@@ -6,7 +6,7 @@
 #include <assert.h>
 #include <stdio.h>
 
-#include "../../../../../zoo/exports.h"
+#include "../../../zoo/exports.h"
 
 target_ulong HELPER(cx_reg)(CPURISCVState *env, target_ulong cf_id, 
                              target_ulong rs1, target_ulong rs2)
