@@ -52,7 +52,7 @@ target_ulong HELPER(cx_reg)(CPURISCVState *env, target_ulong cf_id,
         env->cx_status = cx_status.idx;
     }
 
-    if (OPCODE_ID > num_cfs[CX_ID] - 1) {
+    if (OPCODE_ID >= MAX_CF_IDS || cx_funcs[CX_ID][OPCODE_ID] == NULL) {
         cx_status_t cx_status = {.idx = env->cx_status};
         cx_status.sel.IF = 1;
         env->cx_status = cx_status.idx;
