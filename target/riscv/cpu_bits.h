@@ -608,6 +608,7 @@
 #define CSR_JVT             0x017
 
 /* CX Extension */
+/* TODO: address TBD -- spec draft says 0xCC0, Artur used 0x800; confirm with spec owners */
 #define CSR_CXSEL           0x800
 
 /* CXSEL CSR bits */
@@ -615,7 +616,9 @@
 #define CXSEL_TYPE          0x70000000
 #define CXSEL_SEL           0x0FFFFFFF
 
+/* TODO: address TBD -- pending spec finalisation */
 #define CSR_CXSIDX          0x801
+/* TODO: address TBD -- pending spec finalisation */
 #define CSR_CXSDATA         0x802
 
 /* mstatus CSR bits */

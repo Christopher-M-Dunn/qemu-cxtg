@@ -801,11 +801,7 @@ static void riscv_cpu_reset_hold(Object *obj, ResetType type)
     if (riscv_cpu_cfg(env)->ext_zicx) {
         env->cxsel = 0;
         env->cxidx = 0;
-        env->cxdata = 0;        
-        qemu_printf("# Zicx SET! [HART=%d]\n", (int)env->mhartid);
-        // env->hartid
-    } else {
-        qemu_printf("# Zicx NOT SET! [HART=%d]\n", (int)env->mhartid);
+        env->cxdata = 0;
     }
 #endif
 }
