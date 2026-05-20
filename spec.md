@@ -438,27 +438,17 @@ make check-qtest
 
 ## Commit History
 
-Key commits on `feature/cx` branch:
-
-```
-d65195f981 - target/riscv: add Composable Extension document
-fb319ac3fd - target/riscv: remove CX CSR cxsetsel and fix typos
-64a1e2acf0 - target/riscv: read/write CX CSRs from/into RISC-V CPU state
-3a499be571 - target/riscv: add tracing options for all CX CSR registers
-dca666dd27 - target/riscv: add CSR cxsetsel, cxidx and cxdata
-d3eb9918ba - target/riscv: add CSR cxsel
-828b181ec9 - target/riscv: add Zicx extension
-```
+see `../docs/progress.md`
 
 ## Contact
 
-**Maintainer:** Artur Lojewski  
-**Email:** lojewski@gmail.com  
+**Maintainer:** Christopher Dunn  
+**Email:** christopher.m.dunn@gmail.com  
 **Repository:** QEMU RISC-V  
-**Branch:** feature/cx
+**Branch:** cxtg
 
 ---
 
-**Document Version:** 1.0  
-**Last Updated:** 2025-12-29  
+**Document Version:** 2.0  
+**Last Updated:** 2026-05-19  
 **QEMU Version:** Development (post-9.2)

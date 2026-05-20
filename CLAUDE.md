@@ -217,10 +217,32 @@ When adding new files:
 - **docs/specs/riscv-aia.rst** - Advanced Interrupt Architecture
 - **docs/specs/riscv-iommu.rst** - IOMMU specification
 
-## Current Branch: feature/cx
+## CX Extension Workflow
 
-Working on Zicx extension implementation:
-- Adds `cxsel` CSR for custom extension selection
-- Extension config field: `ext_zicx`
-- Files modified: cpu.h, cpu.c, csr.c, kvm/kvm-cpu.c, cpu_cfg_fields.h.inc
-- Follows standard extension pattern described above
+This repo implements the **Zcx/ZcxMulti** composable extensions. It lives as a submodule inside `runtime-cxtg/`.
+
+### Branches
+
+```
+master        ← upstream QEMU; do not touch
+cxtg          ← stable; merge only at phase milestones, always tagged
+cxtg-dev      ← integration branch; all feat/ branches merge here
+feat/<block>  ← one branch per block, cut from cxtg-dev
+```
+
+### Per-block workflow
+
+1. Cut `feat/<block-id>` from `cxtg-dev`.
+2. Implement the feature.
+3. All block tests pass.
+4. PR `feat/<block-id>` → `cxtg-dev`; review diff; merge.
+5. At phase milestone (all blocks in phase green): merge `cxtg-dev` → `cxtg` and tag (e.g. `cxtg-v0.phase1`).
+6. After tagging: in `runtime-cxtg`, commit the updated submodule pointer on `cxtg-dev`, merge `cxtg-dev` → `cxtg`, and apply the same tag.
+
+**Rule:** never commit directly to `cxtg` or `cxtg-dev`. All changes come through a `feat/` branch.
+
+### Implementation status
+
+See `runtime-cxtg/docs/progress.md` for current block status and release notes.
+See `runtime-cxtg/docs/CXTG_QEMU_Action_Plan.md` for full block specs.
+See `runtime-cxtg/docs/todo.md` for deferred decisions and open questions.
