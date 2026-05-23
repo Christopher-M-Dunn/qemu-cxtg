@@ -1,7 +1,8 @@
 /*
  * QEMU RISC-V CX (Composable Extensions)
  *
- * Author: Artur Lojewski lojewski@gmail.com
+ * Authors: Artur Lojewski lojewski@gmail.com
+ *          Christopher Dunn christopher.m.dunn@gmail.com
  *
  * This provides a RISC-V Composable Extensions (CX) interface
  *
@@ -30,30 +31,48 @@ void cxsel_csr_read(CPURISCVState *env, uint32_t reg_index, target_ulong *val)
 
 void cxsel_csr_write(CPURISCVState *env, uint32_t reg_index, target_ulong val)
 {
+    /* cxsel is URO — direct writes trap via hardware encoding; */
     trace_cxsel_csr_write(env->mhartid, reg_index, val);
-    // Note: CSR cxsel is read-only!
 }
 
 void cxsidx_csr_read(CPURISCVState *env, uint32_t reg_index, target_ulong *val)
 {
-    *val = env->cxidx;
+    *val = env->cxsidx;
     trace_cxsidx_csr_read(env->mhartid, reg_index, *val);
 }
 
 void cxsidx_csr_write(CPURISCVState *env, uint32_t reg_index, target_ulong val)
 {
-    env->cxidx = val;
+    env->cxsidx = val;
     trace_cxsidx_csr_write(env->mhartid, reg_index, val);
 }
 
-void cxsdata_csr_read(CPURISCVState *env, uint32_t reg_index, target_ulong *val)
+/*
+ * cxsdata_csr_op — combined atomic handler registered as csr_ops[].op.
+ *
+ * Using .op instead of separate .read/.write ensures cxsidx increments
+ * exactly once per instruction for all CSR variants (csrr, csrw, csrrw,
+ * csrrs, csrrc).  csrrw is the dominant pattern (context spill/fill).
+ *
+ * write_mask encodes the instruction variant:
+ *   csrr/csrrs x0/csrrc x0  write_mask=0   read only
+ *   csrw/csrrs/csrrc         write_mask=rs1 partial write (set/clear bits)
+ *   csrrw                    write_mask=-1  full replace
+ */
+RISCVException cxsdata_csr_op(CPURISCVState *env, int csrno,
+                               target_ulong *ret_value,
+                               target_ulong new_value, target_ulong write_mask)
 {
-    *val = env->cxdata;
-    trace_cxsdata_csr_read(env->mhartid, reg_index, *val);
-}
+    target_ulong old = env->cxsdata;
 
-void cxsdata_csr_write(CPURISCVState *env, uint32_t reg_index, target_ulong val)
-{
-    env->cxdata = val;
-    trace_cxsdata_csr_write(env->mhartid, reg_index, val);
+    if (ret_value) {
+        *ret_value = old;
+        trace_cxsdata_csr_read(env->mhartid, csrno, old);
+    }
+    if (write_mask) {
+        env->cxsdata = (old & ~write_mask) | (new_value & write_mask);
+        trace_cxsdata_csr_write(env->mhartid, csrno, env->cxsdata);
+    }
+    env->cxsidx++;
+    return RISCV_EXCP_NONE;
 }

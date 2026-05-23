@@ -29,7 +29,8 @@ void cxsel_csr_write(CPURISCVState *env, uint32_t reg_index, target_ulong val);
 void cxsidx_csr_read(CPURISCVState *env, uint32_t reg_index, target_ulong *val);
 void cxsidx_csr_write(CPURISCVState *env, uint32_t reg_index, target_ulong val);
 
-void cxsdata_csr_read(CPURISCVState *env, uint32_t reg_index, target_ulong *val);
-void cxsdata_csr_write(CPURISCVState *env, uint32_t reg_index, target_ulong val);
+RISCVException cxsdata_csr_op(CPURISCVState *env, int csrno,
+                              target_ulong *ret_value,
+                              target_ulong new_value, target_ulong write_mask);
 
 #endif /* RISCV_CX_H */

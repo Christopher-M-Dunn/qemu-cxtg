@@ -1459,11 +1459,12 @@ static RISCVException read_cxsidx(CPURISCVState *env, int csrno,
     return RISCV_EXCP_NONE;
 }
 
-static RISCVException read_cxsdata(CPURISCVState *env, int csrno,
-                                       target_ulong *val)
+static RISCVException op_cxsdata(CPURISCVState *env, int csrno,
+                                     target_ulong *ret_value,
+                                     target_ulong new_value,
+                                     target_ulong write_mask)
 {
-    cxsdata_csr_read(env, csrno, val);
-    return RISCV_EXCP_NONE;
+    return cxsdata_csr_op(env, csrno, ret_value, new_value, write_mask);
 }
 
 static RISCVException write_cxsel(CPURISCVState *env, int csrno,
@@ -1480,12 +1481,6 @@ static RISCVException write_cxsidx(CPURISCVState *env, int csrno,
     return RISCV_EXCP_NONE;
 }
 
-static RISCVException write_cxsdata(CPURISCVState *env, int csrno,
-                                       target_ulong new_value, uintptr_t ra)
-{
-    cxsdata_csr_write(env, csrno, new_value);
-    return RISCV_EXCP_NONE;
-}
 
 static int rmw_cd_mhpmcounter(CPURISCVState *env, int ctr_idx,
                               target_ulong *val, target_ulong new_val,
@@ -6778,7 +6773,7 @@ riscv_csr_operations csr_ops[CSR_TABLE_SIZE] = {
     /* CX extension CSRs */
     [CSR_CXSEL]          = { "cxsel", cxsel, read_cxsel, write_cxsel },
     [CSR_CXSIDX]         = { "cxsidx", cxsidx, read_cxsidx, write_cxsidx },
-    [CSR_CXSDATA]        = { "cxsdata", cxsdata, read_cxsdata, write_cxsdata },
+    [CSR_CXSDATA]        = { "cxsdata", cxsdata, .op = op_cxsdata },
 
 #endif /* !CONFIG_USER_ONLY */
 };

@@ -800,8 +800,8 @@ static void riscv_cpu_reset_hold(Object *obj, ResetType type)
 #ifndef CONFIG_USER_ONLY
     if (riscv_cpu_cfg(env)->ext_zcx) {
         env->cxsel = 0;
-        env->cxidx = 0;
-        env->cxdata = 0;
+        env->cxsidx = 0;
+        env->cxsdata = 0;
     }
 #endif
 }

@@ -512,8 +512,8 @@ struct CPUArchState {
 
     /* CX extension */
     target_ulong cxsel;
-    target_ulong cxidx;
-    target_ulong cxdata;
+    target_ulong cxsidx;
+    target_ulong cxsdata;
 };
 
 /*

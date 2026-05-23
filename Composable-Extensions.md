@@ -58,6 +58,11 @@
 
 * CX CSR's! Can they be interrupted mid-execution with visible progress state (ISA-defined)??? Do we have restart semantics?
 
+* cxsdata auto-increment naming: should the current auto-incrementing CSR be renamed `cxsdatai` and a new non-incrementing `cxsdata` be added?
+  Current: `cxsdata` = access-and-increment (sequential streaming via csrrw).
+  Proposed: `cxsdatai` = access-and-increment (streaming/spill/fill); `cxsdata` = plain access, no side effect on cxsidx (random access without needing to save/restore cxsidx).
+  This matches the common convention that the plain name has no side effects and the suffixed variant is the special form.
+
 
 
 
