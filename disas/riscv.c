@@ -2444,8 +2444,8 @@ static const char *csr_name(int csrno)
     case 0x07b2: return "dscratch0";
     case 0x07b3: return "dscratch1";
 
-    /* CX * TODO: CSR addresses are placeholders pending spec finalisation (~permanent) */
-    case 0x0C20: return "cxsel";   /* URO user range */
+    /* CX * TODO: CSR addresses are placeholders pending spec finalisation */
+    case 0x0CA0: return "cxsel";   /* standard URO user range */
     case 0x018:  return "cxsidx";  /* URW user range */
     case 0x019:  return "cxsdata"; /* URW user range */
     

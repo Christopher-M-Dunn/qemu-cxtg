@@ -608,8 +608,8 @@
 #define CSR_JVT             0x017
 
 /* CX Extension */
-/* TODO: CSR addresses are placeholders pending spec finalisation (~permanent) */
-#define CSR_CXSEL           0xC20  /* standard URO user range */
+/* TODO: CSR addresses are placeholders pending spec finalisation */
+#define CSR_CXSEL           0xCA0  /* standard URO user range (bits[11:10]=11, [9:8]=00, [7:6]=10) */
 #define CSR_CXSIDX          0x018  /* standard URW user range */
 #define CSR_CXSDATA         0x019  /* standard URW user range */
 
