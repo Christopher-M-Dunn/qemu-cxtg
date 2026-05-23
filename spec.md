@@ -22,15 +22,46 @@ The Zicx extension addresses the challenge of managing multiple custom RISC-V ex
 
 ### CSR Definitions
 
-The Zicx extension introduces three new Machine-mode CSRs in the custom CSR space (0x800-0x8FF):
+CSR addresses are placeholders pending spec finalisation (~permanent TODO).
+See `todo.md` for tracking. Do not treat as stable.
 
-| CSR Address | Name      | Access | Description                           |
-|-------------|-----------|--------|---------------------------------------|
-| 0x800       | `cxsel`   | RO     | Custom Extension Selector             |
-| 0x801       | `cxsidx`  | RW     | Custom Extension Index                |
-| 0x802       | `cxsdata` | RW     | Custom Extension Data                 |
+| CSR Address | Name      | Access | Description              |
+|-------------|-----------|--------|--------------------------|
+| 0xC20       | `cxsel`   | URO    | CX Selector              |
+| 0x018       | `cxsidx`  | URW    | CX State Index           |
+| 0x019       | `cxsdata` | URW    | CX State Data            |
 
 **Note:** CSR addresses are defined in `target/riscv/cpu_bits.h`
+
+### cxsel Field Layout (Direct Mode)
+
+```
+[XLEN-1:16] reserved | [15:8] SID | [7:0] CXID
+```
+
+**Naming departure from spec:** The spec (Figure 3) calls the [15:8] field **IDX**.
+This implementation uses **SID** (State ID) for clarity. TODO: align with TG/spec
+terminology once finalised.
+
+### cxsetsel WARL Clamping (implementation-defined)
+
+Two clamping rules applied by the `cxsetsel` translate handler before writing `cxsel`:
+
+1. **CXID=0 (legacy): SID clamped to 0.** When CXID=0, SID is reserved and has no
+   meaning. Any non-zero SID is masked to 0.
+
+2. **Negative values clamped to CX_SEL_INVALID (~0UL).** If the value is negative
+   (sign bit set), it is stored as ~0UL. This subsumes ~0UL itself.
+
+```c
+if (CXID(val) == 0) {
+    val &= ~CXSEL_SID_MASK;
+}
+if ((intptr_t)val < 0) {
+    val = ~0UL;
+}
+env->cxsel = val;
+```
 
 ### CSR Behavior
 
