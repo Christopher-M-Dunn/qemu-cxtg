@@ -608,18 +608,22 @@
 #define CSR_JVT             0x017
 
 /* CX Extension */
-/* TODO: address TBD -- spec draft says 0xCC0, Artur used 0x800; confirm with spec owners */
-#define CSR_CXSEL           0x800
+/* TODO: CSR addresses are placeholders pending spec finalisation (~permanent) */
+#define CSR_CXSEL           0xC20  /* standard URO user range */
+#define CSR_CXSIDX          0x018  /* standard URW user range */
+#define CSR_CXSDATA         0x019  /* standard URW user range */
 
-/* CXSEL CSR bits */
-#define CXSEL_INV           0x80000000
-#define CXSEL_TYPE          0x70000000
-#define CXSEL_SEL           0x0FFFFFFF
+/* cxsel field layout (Direct Mode, Figure 3):
+ * [XLEN-1:16] reserved | [15:8] SID (spec calls this IDX) | [7:0] CXID */
+#define CXSEL_CXID_POSITION 0
+#define CXSEL_CXID_BITS     8
+#define CXSEL_SID_POSITION  8
+#define CXSEL_SID_BITS      8
 
-/* TODO: address TBD -- pending spec finalisation */
-#define CSR_CXSIDX          0x801
-/* TODO: address TBD -- pending spec finalisation */
-#define CSR_CXSDATA         0x802
+#define CXSEL_CXID_MASK \
+    (((target_ulong)((1U << CXSEL_CXID_BITS) - 1)) << CXSEL_CXID_POSITION)
+#define CXSEL_SID_MASK \
+    (((target_ulong)((1U << CXSEL_SID_BITS) - 1)) << CXSEL_SID_POSITION)
 
 /* mstatus CSR bits */
 #define MSTATUS_UIE         0x00000001
