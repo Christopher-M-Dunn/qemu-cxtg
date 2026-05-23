@@ -5850,59 +5850,26 @@ bool riscv_csr_is_vpu(int csrno)
 
 static RISCVException cxsel(CPURISCVState *env, int csrno)
 {
-    if (riscv_cpu_cfg(env)->ext_zcx) {
-////////////
-        if (csrno <= CSR_PMPCFG3) {
-            uint32_t reg_index = csrno - CSR_PMPCFG0;
-
-            /* TODO: RV128 restriction check */
-            if ((reg_index & 1) && (riscv_cpu_mxl(env) == MXL_RV64)) {
-                return RISCV_EXCP_ILLEGAL_INST;
-            }
-        }
-///////////////
-        return RISCV_EXCP_NONE;
+    if (!riscv_cpu_cfg(env)->ext_zcx) {
+        return RISCV_EXCP_ILLEGAL_INST;
     }
-
-    return RISCV_EXCP_ILLEGAL_INST;
+    return RISCV_EXCP_NONE;
 }
 
 static RISCVException cxsidx(CPURISCVState *env, int csrno)
 {
-    if (riscv_cpu_cfg(env)->ext_zcx) {
-////////////
-        if (csrno <= CSR_PMPCFG3) {
-            uint32_t reg_index = csrno - CSR_PMPCFG0;
-
-            /* TODO: RV128 restriction check */
-            if ((reg_index & 1) && (riscv_cpu_mxl(env) == MXL_RV64)) {
-                return RISCV_EXCP_ILLEGAL_INST;
-            }
-        }
-///////////////
-        return RISCV_EXCP_NONE;
+    if (!riscv_cpu_cfg(env)->ext_zcx) {
+        return RISCV_EXCP_ILLEGAL_INST;
     }
-
-    return RISCV_EXCP_ILLEGAL_INST;
+    return RISCV_EXCP_NONE;
 }
 
 static RISCVException cxsdata(CPURISCVState *env, int csrno)
 {
-    if (riscv_cpu_cfg(env)->ext_zcx) {
-////////////
-        if (csrno <= CSR_PMPCFG3) {
-            uint32_t reg_index = csrno - CSR_PMPCFG0;
-
-            /* TODO: RV128 restriction check */
-            if ((reg_index & 1) && (riscv_cpu_mxl(env) == MXL_RV64)) {
-                return RISCV_EXCP_ILLEGAL_INST;
-            }
-        }
-///////////////
-        return RISCV_EXCP_NONE;
+    if (!riscv_cpu_cfg(env)->ext_zcx) {
+        return RISCV_EXCP_ILLEGAL_INST;
     }
-
-    return RISCV_EXCP_ILLEGAL_INST;
+    return RISCV_EXCP_NONE;
 }
 
 /*
