@@ -5855,7 +5855,7 @@ bool riscv_csr_is_vpu(int csrno)
 
 static RISCVException cxsel(CPURISCVState *env, int csrno)
 {
-    if (riscv_cpu_cfg(env)->ext_zicx) {
+    if (riscv_cpu_cfg(env)->ext_zcx) {
 ////////////
         if (csrno <= CSR_PMPCFG3) {
             uint32_t reg_index = csrno - CSR_PMPCFG0;
@@ -5874,7 +5874,7 @@ static RISCVException cxsel(CPURISCVState *env, int csrno)
 
 static RISCVException cxsidx(CPURISCVState *env, int csrno)
 {
-    if (riscv_cpu_cfg(env)->ext_zicx) {
+    if (riscv_cpu_cfg(env)->ext_zcx) {
 ////////////
         if (csrno <= CSR_PMPCFG3) {
             uint32_t reg_index = csrno - CSR_PMPCFG0;
@@ -5893,7 +5893,7 @@ static RISCVException cxsidx(CPURISCVState *env, int csrno)
 
 static RISCVException cxsdata(CPURISCVState *env, int csrno)
 {
-    if (riscv_cpu_cfg(env)->ext_zicx) {
+    if (riscv_cpu_cfg(env)->ext_zcx) {
 ////////////
         if (csrno <= CSR_PMPCFG3) {
             uint32_t reg_index = csrno - CSR_PMPCFG0;

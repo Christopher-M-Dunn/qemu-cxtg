@@ -134,7 +134,7 @@ const RISCVIsaExtData isa_edata_arr[] = {
     ISA_EXT_DATA_ENTRY(zicond, PRIV_VERSION_1_12_0, ext_zicond),
     ISA_EXT_DATA_ENTRY(zicntr, PRIV_VERSION_1_12_0, ext_zicntr),
     ISA_EXT_DATA_ENTRY(zicsr, PRIV_VERSION_1_10_0, ext_zicsr),
-    ISA_EXT_DATA_ENTRY(zicx, PRIV_VERSION_1_10_0, ext_zicx),
+    ISA_EXT_DATA_ENTRY(zcx, PRIV_VERSION_1_10_0, ext_zcx),
     ISA_EXT_DATA_ENTRY(zifencei, PRIV_VERSION_1_10_0, ext_zifencei),
     ISA_EXT_DATA_ENTRY(zihintntl, PRIV_VERSION_1_10_0, ext_zihintntl),
     ISA_EXT_DATA_ENTRY(zihintpause, PRIV_VERSION_1_10_0, ext_zihintpause),
@@ -798,7 +798,7 @@ static void riscv_cpu_reset_hold(Object *obj, ResetType type)
 #endif
 
 #ifndef CONFIG_USER_ONLY
-    if (riscv_cpu_cfg(env)->ext_zicx) {
+    if (riscv_cpu_cfg(env)->ext_zcx) {
         env->cxsel = 0;
         env->cxidx = 0;
         env->cxdata = 0;
@@ -1255,7 +1255,7 @@ const RISCVCPUMultiExtConfig riscv_cpu_extensions[] = {
     MULTI_EXT_CFG_BOOL("zicfilp", ext_zicfilp, false),
     MULTI_EXT_CFG_BOOL("zicfiss", ext_zicfiss, false),
     MULTI_EXT_CFG_BOOL("zicsr", ext_zicsr, true),
-    MULTI_EXT_CFG_BOOL("zicx", ext_zicx, false),
+    MULTI_EXT_CFG_BOOL("zcx", ext_zcx, false),
     MULTI_EXT_CFG_BOOL("zihintntl", ext_zihintntl, true),
     MULTI_EXT_CFG_BOOL("zihintpause", ext_zihintpause, true),
     MULTI_EXT_CFG_BOOL("zimop", ext_zimop, false),
