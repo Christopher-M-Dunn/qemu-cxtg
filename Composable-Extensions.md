@@ -58,6 +58,13 @@
 
 * CX CSR's! Can they be interrupted mid-execution with visible progress state (ISA-defined)??? Do we have restart semantics?
 
+* cxsidx out-of-bounds behavior: the spec (§4.3) says cxsdata access with an invalid cxsidx is "undefined", and cxsidx after the last word is "undefined". Implementation must choose one:
+  (a) trap (ILLEGAL_INST) on any cxsdata access where cxsidx >= state_size — enforced in the cxsel/cxsdata predicates once state_size is wired up (Phase 4);
+  (b) clamp: cxsidx stops incrementing at state_size-1. caller ccould (inefficiently) detect end-of-state by observing cxsidx no longer advancing;
+  (c) silent wrap / undefined — no enforcement, caller is responsible.
+  Option (b) is self-signalling and avoids a trap handler overhead in hot spill/fill paths. Option (a) catches bugs earlier.
+  Whichever is chosen, cxsidx WARL range enforcement is deferred to Block 4.2.
+
 * cxsdata auto-increment naming: should the current auto-incrementing CSR be renamed `cxsdatai` and a new non-incrementing `cxsdata` be added?
   Current: `cxsdata` = access-and-increment (sequential streaming via csrrw).
   Proposed: `cxsdatai` = access-and-increment (streaming/spill/fill); `cxsdata` = plain access, no side effect on cxsidx (random access without needing to save/restore cxsidx).
