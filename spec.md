@@ -1,17 +1,17 @@
-# RISC-V Zicx Extension Implementation Specification
+# RISC-V Zcx Extension Implementation Specification
 
 ## Overview
 
-This document specifies the implementation of the **Zicx (Composable Extensions)** extension for QEMU's RISC-V target. The Zicx extension provides a standardized interface for multiplexing custom extensions through Control and Status Registers (CSRs), enabling dynamic selection and configuration of composable custom extensions.
+This document specifies the implementation of the **Zcx (Composable Extensions)** extension for QEMU's RISC-V target. The Zcx extension provides a standardized interface for multiplexing custom extensions through Control and Status Registers (CSRs), enabling dynamic selection and configuration of composable custom extensions.
 
 **Project:** QEMU RISC-V Emulator  
-**Branch:** feature/cx  
-**Author:** Artur Lojewski (lojewski@gmail.com)  
+**Branch:** cxtg  
+**Authors:** Artur Lojewski (lojewski@gmail.com), Christopher Dunn (christopher.m.dunn@gmail.com)  
 **Status:** In Development  
 
 ## Extension Purpose
 
-The Zicx extension addresses the challenge of managing multiple custom RISC-V extensions by providing:
+The Zcx extension addresses the challenge of managing multiple custom RISC-V extensions by providing:
 
 1. **Extension Selection** - Runtime selection of active custom extension via `cxsel` CSR
 2. **Extension Configuration** - Indexed access to extension parameters via `cxsidx` and `cxsdata` CSRs
@@ -27,7 +27,7 @@ See `todo.md` for tracking. Do not treat as stable.
 
 | CSR Address | Name      | Access | Description              |
 |-------------|-----------|--------|--------------------------|
-| 0xC20       | `cxsel`   | URO    | CX Selector              |
+| 0xCA0       | `cxsel`   | URO    | CX Selector              |
 | 0x018       | `cxsidx`  | URW    | CX State Index           |
 | 0x019       | `cxsdata` | URW    | CX State Data            |
 
@@ -65,7 +65,7 @@ env->cxsel = val;
 
 ### CSR Behavior
 
-#### CXSEL - Custom Extension Selector (0x800)
+#### CXSEL - Custom Extension Selector (0xCA0)
 
 **Purpose:** Selects which custom extension handles CX instructions
 
@@ -81,9 +81,9 @@ env->cxsel = val;
 - When `cxsel` is invalid: CX instructions raise illegal instruction exception
 - Write attempts return `RISCV_EXCP_ILLEGAL_INST` (enforcing read-only behavior)
 
-**Implementation:** `target/riscv/csr.c:1453-1477`
+**Implementation:** `target/riscv/csr.c` — `read_cxsel`, `write_cxsel`
 
-#### CXSIDX - Custom Extension Index (0x801)
+#### CXSIDX - Custom Extension Index (0x018)
 
 **Purpose:** Indirect addressing index for extension configuration
 
@@ -97,9 +97,9 @@ env->cxsel = val;
 - Combined with `cxsdata` for indirect configuration access
 - Interpretation is extension-dependent
 
-**Implementation:** `target/riscv/csr.c:1460-1468, 1482-1487`
+**Implementation:** `target/riscv/csr.c` — `read_cxsidx`, `write_cxsidx`
 
-#### CXSDATA - Custom Extension Data (0x802)
+#### CXSDATA - Custom Extension Data (0x019)
 
 **Purpose:** Data register for indexed extension configuration
 
@@ -112,8 +112,9 @@ env->cxsel = val;
 - Read/write configuration data at offset specified by `cxsidx`
 - Enables array-like access to extension parameters
 - Interpretation is extension-dependent
+- Accessing cxsdata auto-increments cxsidx (handled by combined `.op` handler)
 
-**Implementation:** `target/riscv/csr.c:1470-1476, 1489-1494`
+**Implementation:** `target/riscv/csr.c` — `op_cxsdata` (combined read/write)
 
 ## Implementation Details
 
@@ -121,7 +122,7 @@ env->cxsel = val;
 
 ```
 target/riscv/
-├── cpu.h                    # CPURISCVState structure, ext_zicx field
+├── cpu.h                    # CPURISCVState structure, ext_zcx field
 ├── cpu.c                    # Extension initialization, reset handler
 ├── cpu_bits.h               # CSR address definitions (CSR_CXSEL, etc.)
 ├── cpu_cfg_fields.h.inc     # Configuration field macros
@@ -135,7 +136,7 @@ target/riscv/
 
 ### CPU State Extension
 
-The `CPURISCVState` structure (cpu.h:520-522) is extended with three fields:
+The `CPURISCVState` structure is extended with three fields:
 
 ```c
 struct CPUArchState {
@@ -143,73 +144,59 @@ struct CPUArchState {
     
     /* CX extension */
     target_ulong cxsel;   /* Extension selector (read-only) */
-    target_ulong cxidx;   /* Configuration index */
-    target_ulong cxdata;  /* Configuration data */
+    target_ulong cxsidx;  /* Configuration index */
+    target_ulong cxsdata; /* Configuration data */
 };
 ```
 
 ### Configuration System
 
-**Extension Flag:** `ext_zicx` (Boolean)
+**Extension Flag:** `ext_zcx` (Boolean)
 
 **Registration:**
-- Configuration field: `cpu_cfg_fields.h.inc:35` - `BOOL_FIELD(ext_zicx)`
-- Property definition: `cpu.c:1262` - `MULTI_EXT_CFG_BOOL("zicx", ext_zicx, false)`
-- ISA string entry: `cpu.c:120` - `ISA_EXT_DATA_ENTRY(zicx, PRIV_VERSION_1_10_0, ext_zicx)`
-- KVM mapping: `kvm/kvm-cpu.c:301` - `KVM_EXT_CFG("zicx", ext_zicx, KVM_RISCV_ISA_EXT_ZICX)`
+- Configuration field: `BOOL_FIELD(ext_zcx)`
+- Property definition: `MULTI_EXT_CFG_BOOL("zcx", ext_zcx, false)`
+- ISA string entry: `ISA_EXT_DATA_ENTRY(zcx, PRIV_VERSION_1_10_0, ext_zcx)`
+- KVM mapping: `KVM_EXT_CFG("zcx", ext_zcx, KVM_RISCV_ISA_EXT_ZCX)`
 
 **Enabling:**
 ```bash
-qemu-system-riscv64 -cpu rv64,zicx=on ...
+qemu-system-riscv64 -cpu rv64,zcx=on ...
 ```
 
 ### Reset Behavior
 
-On CPU reset (`cpu.c:802-805`):
+On CPU reset:
 
 ```c
-if (riscv_cpu_cfg(env)->ext_zicx) {
-    env->cxsel = 0;   /* Reset to built-in extension */
-    env->cxidx = 0;   /* Clear index */
-    env->cxdata = 0;  /* Clear data */
+if (riscv_cpu_cfg(env)->ext_zcx) {
+    env->cxsel  = 0;
+    env->cxsidx = 0;
+    env->cxsdata = 0;
 }
 ```
 
 ### CSR Predicate Functions
 
-Three predicate functions control CSR accessibility (`csr.c:5862-5907`):
+Three predicate functions gate CSR access in `csr.c`. All three follow the same pattern:
 
 ```c
 static RISCVException cxsel(CPURISCVState *env, int csrno)
 {
-    if (riscv_cpu_cfg(env)->ext_zicx) {
-        return RISCV_EXCP_NONE;
+    if (!riscv_cpu_cfg(env)->ext_zcx) {
+        return RISCV_EXCP_ILLEGAL_INST;
     }
-    return RISCV_EXCP_ILLEGAL_INST;
-}
-
-static RISCVException cxsidx(CPURISCVState *env, int csrno)
-{
-    if (riscv_cpu_cfg(env)->ext_zicx) {
-        return RISCV_EXCP_NONE;
-    }
-    return RISCV_EXCP_ILLEGAL_INST;
-}
-
-static RISCVException cxsdata(CPURISCVState *env, int csrno)
-{
-    if (riscv_cpu_cfg(env)->ext_zicx) {
-        return RISCV_EXCP_NONE;
-    }
-    return RISCV_EXCP_ILLEGAL_INST;
+    return RISCV_EXCP_NONE;
 }
 ```
+
+`cxsidx` and `cxsdata` predicates are identical in structure, checking `ext_zcx`.
 
 ### CSR Operation Handlers
 
 The core CSR operations are implemented in `target/riscv/cx.c`:
 
-**Read Operations:**
+**cxsel (read/write):**
 ```c
 void cxsel_csr_read(CPURISCVState *env, uint32_t reg_index, target_ulong *val)
 {
@@ -217,50 +204,59 @@ void cxsel_csr_read(CPURISCVState *env, uint32_t reg_index, target_ulong *val)
     trace_cxsel_csr_read(env->mhartid, reg_index, *val);
 }
 
-void cxsidx_csr_read(CPURISCVState *env, uint32_t reg_index, target_ulong *val)
-{
-    *val = env->cxidx;
-    trace_cxsidx_csr_read(env->mhartid, reg_index, *val);
-}
-
-void cxsdata_csr_read(CPURISCVState *env, uint32_t reg_index, target_ulong *val)
-{
-    *val = env->cxdata;
-    trace_cxsdata_csr_read(env->mhartid, reg_index, *val);
-}
-```
-
-**Write Operations:**
-```c
 void cxsel_csr_write(CPURISCVState *env, uint32_t reg_index, target_ulong val)
 {
     trace_cxsel_csr_write(env->mhartid, reg_index, val);
-    /* Note: CSR cxsel is read-only! */
-    /* Write is traced but not applied */
+    /* cxsel is read-only (in a range that QEMU hardware-enforces as read-only); write is traced but should never fire */
+}
+```
+
+**cxsidx (read/write):**
+```c
+void cxsidx_csr_read(CPURISCVState *env, uint32_t reg_index, target_ulong *val)
+{
+    *val = env->cxsidx;
+    trace_cxsidx_csr_read(env->mhartid, reg_index, *val);
 }
 
 void cxsidx_csr_write(CPURISCVState *env, uint32_t reg_index, target_ulong val)
 {
-    env->cxidx = val;
+    env->cxsidx = val;
     trace_cxsidx_csr_write(env->mhartid, reg_index, val);
 }
+```
 
-void cxsdata_csr_write(CPURISCVState *env, uint32_t reg_index, target_ulong val)
+**cxsdata (combined `.op` handler — auto-increments cxsidx):**
+```c
+RISCVException cxsdata_csr_op(CPURISCVState *env, int csrno,
+                               target_ulong *ret_value,
+                               target_ulong new_value, target_ulong write_mask)
 {
-    env->cxdata = val;
-    trace_cxsdata_csr_write(env->mhartid, reg_index, val);
+    target_ulong old = env->cxsdata;
+    if (ret_value) {
+        *ret_value = old;
+        trace_cxsdata_csr_read(env->mhartid, csrno, old);
+    }
+    if (write_mask) {
+        env->cxsdata = (old & ~write_mask) | (new_value & write_mask);
+        trace_cxsdata_csr_write(env->mhartid, csrno, env->cxsdata);
+    }
+    env->cxsidx++;
+    return RISCV_EXCP_NONE;
 }
 ```
 
 ### CSR Registration
 
-CSRs are registered in the global `csr_ops[]` table (`csr.c:6785-6787`):
+CSRs are registered in the global `csr_ops[]` table in `csr.c`:
 
 ```c
-[CSR_CXSEL]   = { "cxsel",   cxsel,   read_cxsel,   write_cxsel   },
-[CSR_CXSIDX]  = { "cxsidx",  cxsidx,  read_cxsidx,  write_cxsidx  },
-[CSR_CXSDATA] = { "cxsdata", cxsdata, read_cxsdata, write_cxsdata },
+[CSR_CXSEL]   = { "cxsel",   cxsel,  read_cxsel,  write_cxsel },
+[CSR_CXSIDX]  = { "cxsidx",  cxsidx, read_cxsidx, write_cxsidx },
+[CSR_CXSDATA] = { "cxsdata", cxsdata, .op = op_cxsdata },
 ```
+
+`cxsdata` uses the combined `.op` field instead of separate `.read`/`.write` so that `cxsidx++` fires exactly once per instruction regardless of whether the access is a read, write, or swap.
 
 ### Tracing Support
 
@@ -287,7 +283,7 @@ qemu-system-riscv64 -trace 'cxsel_*' ...
 
 ```assembly
 # Read current extension selector
-csrr t0, 0x800          # t0 = cxsel (should be 0 after reset)
+csrr t0, 0xCA0          # t0 = cxsel (should be 0 after reset)
 ```
 
 ### Example 2: Configure Extension via Indexed Access
@@ -295,27 +291,27 @@ csrr t0, 0x800          # t0 = cxsel (should be 0 after reset)
 ```assembly
 # Write to extension configuration array
 li   t0, 5              # Index = 5
-csrw 0x801, t0          # cxsidx = 5
+csrw 0x018, t0          # cxsidx = 5
 
 li   t1, 0xDEADBEEF     # Configuration value
-csrw 0x802, t1          # cxsdata[5] = 0xDEADBEEF
+csrw 0x019, t1          # cxsdata[5] = 0xDEADBEEF; cxsidx auto-increments to 6
 
-# Read back configuration
-csrr t2, 0x802          # t2 = cxsdata[5]
+# Read back (cxsidx is now 6 after the write above; reset if needed)
+csrr t2, 0x019          # t2 = cxsdata[6]; cxsidx auto-increments to 7
 ```
 
 ### Example 3: QEMU Command Line
 
 ```bash
-# Enable Zicx extension
+# Enable Zcx extension
 qemu-system-riscv64 \
-    -cpu rv64,zicx=on \
+    -cpu rv64,zcx=on \
     -machine virt \
     -kernel my_kernel.elf
 
 # With tracing
 qemu-system-riscv64 \
-    -cpu rv64,zicx=on \
+    -cpu rv64,zcx=on \
     -machine virt \
     -trace 'cxsel_*' \
     -kernel my_kernel.elf
@@ -326,8 +322,8 @@ qemu-system-riscv64 \
 ### Unit Tests
 
 1. **CSR Accessibility**
-   - Verify CSRs are accessible when `ext_zicx=true`
-   - Verify illegal instruction exception when `ext_zicx=false`
+   - Verify CSRs are accessible when `ext_zcx=true`
+   - Verify illegal instruction exception when `ext_zcx=false`
 
 2. **Reset Behavior**
    - Verify `cxsel=0` after reset
@@ -357,9 +353,9 @@ qemu-system-riscv64 \
 QEMU functional test framework (`tests/functional/riscv*/`):
 
 ```python
-def test_zicx_csrs(self):
-    """Test Zicx CSR access"""
-    # Boot with Zicx enabled
+def test_zcx_csrs(self):
+    """Test Zcx CSR access"""
+    # Boot with Zcx enabled
     # Execute CSR read/write instructions
     # Verify expected behavior
 ```
@@ -370,7 +366,7 @@ def test_zicx_csrs(self):
 
 - **Privilege Level:** Machine-mode (M-mode) CSRs
 - **Minimum Priv Spec:** v1.10.0
-- **CSR Address Space:** Custom (0x800-0x8FF)
+- **CSR Address Space:** cxsel at 0xCA0 (user RO); cxsidx/cxsdata at 0x018/0x019 (user RW)
 - **WARL Semantics:** Implemented for `cxsel`
 
 ### QEMU Coding Standards
@@ -406,7 +402,7 @@ make -j$(nproc)
 
 ```bash
 # Check extension is recognized
-./qemu-system-riscv64 -cpu rv64,help | grep zicx
+./qemu-system-riscv64 -cpu rv64,help | grep zcx
 
 # Run tests
 make check-qtest
@@ -462,10 +458,10 @@ make check-qtest
 ### Source Code Locations
 
 - Main implementation: `target/riscv/cx.{c,h}`
-- CSR operations: `target/riscv/csr.c` (lines 1440-1494, 5862-5907, 6785-6787)
-- CPU state: `target/riscv/cpu.h` (line 520-522)
-- Configuration: `target/riscv/cpu.c` (lines 120, 802-805, 1262)
-- KVM support: `target/riscv/kvm/kvm-cpu.c` (line 301)
+- CSR operations: `target/riscv/csr.c` — predicates `cxsel`/`cxsidx`/`cxsdata`, handlers `read_cxsel`, `write_cxsel`, `read_cxsidx`, `write_cxsidx`, `op_cxsdata`
+- CPU state: `target/riscv/cpu.h` — `CPURISCVState` fields `cxsel`, `cxsidx`, `cxsdata`
+- Configuration: `target/riscv/cpu.c` — `ISA_EXT_DATA_ENTRY(zcx)`, `MULTI_EXT_CFG_BOOL("zcx")`, reset in `riscv_cpu_reset`
+- KVM support: `target/riscv/kvm/kvm-cpu.c` — `KVM_EXT_CFG("zcx", ext_zcx, KVM_RISCV_ISA_EXT_ZCX)`
 
 ## Commit History
 
