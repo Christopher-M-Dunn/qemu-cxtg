@@ -246,3 +246,13 @@ feat/<block>  ← one branch per block, cut from cxtg-dev
 See `runtime-cxtg/docs/progress.md` for current block status and release notes.
 See `runtime-cxtg/docs/CXTG_QEMU_Action_Plan.md` for full block specs.
 See `runtime-cxtg/docs/todo.md` for deferred decisions and open questions.
+
+## Wiki
+
+Every file touched by this project has a corresponding wiki page under `runtime-cxtg/wiki/runtime-cxtg/qemu-cxtg/`. The wiki is a live reference manual — present tense, no history, no phase annotations.
+
+**Format rules:** read `runtime-cxtg/wiki/schema.md` before writing or editing any wiki page.
+
+**Update trigger — after every file write:** update the wiki immediately after writing or editing any source file, before writing the next file. The wiki update is part of the write action, not a post-step. Do not batch wiki updates to commit time.
+
+**New files:** if the file has no wiki page yet, add it to `runtime-cxtg/wiki/index.md` and create its page at `runtime-cxtg/wiki/runtime-cxtg/qemu-cxtg/<path-to-file>.md` before moving on.
