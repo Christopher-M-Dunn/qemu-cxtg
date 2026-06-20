@@ -41,7 +41,7 @@
 
 ### cxsel CSR / cxsetsel instr
 
-* Read from cxset at reset MUST be the value 0 
+* Read from cxsel at reset MUST be the value 0 
 * Write to the cxsel register MUST NOT cause an exception (since it is a WARL register)
 
 
