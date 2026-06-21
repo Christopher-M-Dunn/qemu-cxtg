@@ -241,6 +241,8 @@ feat/<block>  ← one branch per block, cut from cxtg-dev
 
 **Rule:** never commit directly to `cxtg` or `cxtg-dev`. All changes come through a `feat/` branch.
 
+**Commits:** always ask the user "Ready to commit?" and wait for confirmation before staging any files or running `git add` / `git commit`.
+
 ### Implementation status
 
 See `runtime-cxtg/docs/progress.md` for current block status and release notes.
