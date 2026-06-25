@@ -625,6 +625,12 @@
 #define CXSEL_SID_MASK \
     (((target_ulong)((1U << CXSEL_SID_BITS) - 1)) << CXSEL_SID_POSITION)
 
+/* cxsetsel instruction encoding:
+ * SYSTEM opcode 0x73, funct3=100, funct7=0000000, rs2=x0
+ */
+#define MATCH_CXSETSEL  0x00004073U
+#define MASK_CXSETSEL   0xFFF0707FU
+
 /* mstatus CSR bits */
 #define MSTATUS_UIE         0x00000001
 #define MSTATUS_SIE         0x00000002

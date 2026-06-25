@@ -984,6 +984,7 @@ typedef enum {
     rv_op_ssamoswap_d = 953,
     rv_op_c_sspush = 954,
     rv_op_c_sspopchk = 955,
+    rv_op_cxsetsel = 956,
 } rv_op;
 
 /* register names */
@@ -2254,6 +2255,7 @@ const rv_opcode_data rvi_opcode_data[] = {
       rv_op_sspush, 0 },
     { "c.sspopchk", rv_codec_cmop_ss, rv_fmt_rs1, NULL, rv_op_sspopchk,
       rv_op_sspopchk, 0 },
+    { "cxsetsel", rv_codec_r, rv_fmt_rd_rs1, NULL, 0, 0, 0 },
 };
 
 /* CSR names */
@@ -4066,6 +4068,12 @@ static void decode_inst_opcode(rv_decode *dec, rv_isa isa)
             case 2: op = rv_op_csrrs; break;
             case 3: op = rv_op_csrrc; break;
             case 4:
+                /* cxsetsel: funct7=0, rs2=0; bits[31:20] all zero */
+                if (dec->cfg && dec->cfg->ext_zcx &&
+                    ((inst >> 20) == 0)) {
+                    op = rv_op_cxsetsel;
+                    break;
+                }
                 if (dec->cfg && dec->cfg->ext_zimop) {
                     int imm_mop5, imm_mop3, reg_num;
                     if ((extract32(inst, 22, 10) & 0b1011001111)

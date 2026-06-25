@@ -20,3 +20,4 @@ cxsidx_csr_read(uint64_t mhartid, uint32_t addr_index, uint64_t val) "hart %" PR
 cxsidx_csr_write(uint64_t mhartid, uint32_t addr_index, uint64_t val) "hart %" PRIu64 ": write reg %" PRIu32", val: 0x%" PRIx64
 cxsdata_csr_read(uint64_t mhartid, uint32_t addr_index, uint64_t val) "hart %" PRIu64 ": read reg %" PRIu32", val: 0x%" PRIx64
 cxsdata_csr_write(uint64_t mhartid, uint32_t addr_index, uint64_t val) "hart %" PRIu64 ": write reg %" PRIu32", val: 0x%" PRIx64
+cxsetsel(uint64_t mhartid, uint64_t new_val, uint64_t old_val) "hart %" PRIu64 ": new=0x%" PRIx64 " old=0x%" PRIx64

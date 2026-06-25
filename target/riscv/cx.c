@@ -21,6 +21,7 @@
 
 #include "qemu/osdep.h"
 #include "cpu.h"
+#include "exec/helper-proto.h"
 #include "trace.h"
 
 void cxsel_csr_read(CPURISCVState *env, uint32_t reg_index, target_ulong *val)
@@ -75,4 +76,12 @@ RISCVException cxsdata_csr_op(CPURISCVState *env, int csrno,
     }
     env->cxsidx++;
     return RISCV_EXCP_NONE;
+}
+
+target_ulong helper_cxsetsel(CPURISCVState *env, target_ulong new_val)
+{
+    target_ulong old = env->cxsel;
+    env->cxsel = new_val;
+    trace_cxsetsel(env->mhartid, new_val, old);
+    return old;
 }
