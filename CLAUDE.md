@@ -208,6 +208,42 @@ When adding new files:
 - Target-specific code goes in target/riscv/meson.build
 - Device code goes in hw/riscv/meson.build
 
+## QEMU Build Automation
+
+**Consult `docs/flowchart_QEMU_automation.svg` before adding any instruction, helper, trace event, extension flag, or source file.** QEMU has several interacting automation layers; editing a generated output file instead of its entry point produces silent failures or is overwritten on the next build. Always modify the topmost layer appropriate to the task.
+
+### What is auto-generated (do not edit directly)
+
+| Entry point (you write) | Build system generates |
+|---|---|
+| `target/riscv/insn32.decode` | `build/.../decode-insn32.c.inc` — arg structs, bit-extract, dispatch tree; calls `trans_NAME()` by name |
+| `target/riscv/helper.h` — `DEF_HELPER_N(...)` | `helper-proto.h` C prototype + `helper-gen.h` `gen_helper_*()` TCG wrapper |
+| `target/riscv/trace-events` — one line per event | `trace/generated-events.h` — `trace_*()` callable function |
+| `target/riscv/cpu_cfg_fields.h.inc` — `BOOL_FIELD(ext_zcx)` | Field in `RISCVCPUConfig` struct |
+| `target/riscv/cpu.c` — `MULTI_EXT_CFG_BOOL` + `ISA_EXT_DATA_ENTRY` | QOM property getter/setter; `-cpu rv64,zcx=on` parsing; ISA string output |
+
+### Fully manual (not wired to any generator)
+
+`disas/riscv.c` — three independent additions required per new instruction: (1) enum entry, (2) opcode list entry, (3) decode case in the SYSTEM opcode block. Changes to `.decode` files do **not** update this file.
+
+### Key rules
+
+- `insn_trans/trans_*.c.inc` files are `#include`d directly into `translate.c` — do **not** add them to `meson.build`.
+- New `.c` source files go in `target/riscv/meson.build` (`riscv_ss.add`) — this compiles them into both riscv32 and riscv64 targets.
+- The `tl` type in `DEF_HELPER_N` is `target_ulong` — 32-bit in an RV32 build, 64-bit in an RV64 build.
+
+### Quick reference
+
+| Change | Files to touch | Auto-generated for you |
+|---|---|---|
+| New instruction | `insn32.decode`, `insn_trans/trans_X.c.inc`, `helper.h`, `cx.c`, `disas/riscv.c` | arg struct, dispatch, `gen_helper_*` wrapper |
+| New extension flag | `cpu_cfg_fields.h.inc`, `cpu.c` (×2: MULTI_EXT + ISA_EXT), `kvm-cpu.c` | QOM getter/setter, `-cpu` flag parsing, ISA string |
+| New helper | `helper.h` (`DEF_HELPER_N`), `cx.c` (body) | `gen_helper_*()` inline TCG wrapper, C prototype |
+| New trace point | `trace-events` (1 line) | `trace_*()` callable, conditional no-op |
+| New `.c` file | `target/riscv/meson.build` | Compiled into both targets |
+| Disassembler | `disas/riscv.c` — enum, opcode list, decode case | Nothing — fully manual |
+| `trans_*.c.inc` | `translate.c` (`#include` only) | Compiled as part of `translate.c` TU |
+
 ## Documentation
 
 - **docs/devel/style.rst** - Coding style
