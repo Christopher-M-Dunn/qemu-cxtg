@@ -78,8 +78,8 @@ RISC-V extensions follow this pattern:
 5. Add KVM support in `kvm/kvm-cpu.c` if applicable
 6. Update ISA string parsing if needed
 
-Example from Zicx extension (current branch):
-- Configuration: `ext_zicx` field in RISCVCPUConfig
+Example from Zcx extension (current branch):
+- Configuration: `ext_zcx` field in RISCVCPUConfig
 - CSR: `cxsel` register for custom extension selection
 - CSR ops: predicates check if extension enabled, handlers manage register state
 - Initialization: cxsel set to 0 at reset (built-in custom extension)
@@ -256,5 +256,7 @@ Every file touched by this project has a corresponding wiki page under `runtime-
 **Format rules:** read `runtime-cxtg/wiki/schema.md` before writing or editing any wiki page.
 
 **Update trigger — after every file write:** update the wiki immediately after writing or editing any source file, before writing the next file. The wiki update is part of the write action, not a post-step. Do not batch wiki updates to commit time.
+
+**When renaming a symbol:** update the sub-page filename and the bullet link text in the corresponding Format B main page. The sub-page `.md` filename must match the current symbol name — a stale filename breaks Obsidian links silently.
 
 **New files:** if the file has no wiki page yet, add it to `runtime-cxtg/wiki/index.md` and create its page at `runtime-cxtg/wiki/runtime-cxtg/qemu-cxtg/<path-to-file>.md` before moving on.
