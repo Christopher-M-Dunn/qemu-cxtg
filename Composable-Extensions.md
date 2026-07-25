@@ -1,5 +1,14 @@
 # Requirements
 
+**Authors:** Artur Lojewski, Christopher Dunn
+
+**Description:** This document contains all of the requirements for implementing the Composable Custom Extensions ISA extensions (Zcx, ZcxMulti) in QEMU. All requirements come directly from the spec document (info below). Open questions and working assumptions regarding any gaps due to inconsistent, incomplete, ambiguous, or misunderstood language in the spec document can be found in the Discussion section at the end of this document.
+
+**Spec Title:** RISC-V Composable Custom Extensions  
+**Spec Authors:** RISC-V Composable Custom Extensions Task Group (TG)  
+**Spec Version:** v0.0.0, 2026-03-16: Draft  
+**Spec Location:** https://github.com/riscv/composable-custom-extensions.git
+
 ---
 
 ## Unprivileged CX Multiplexing (`isa-unpriv`)
@@ -64,7 +73,7 @@ New CSRs for `Zcxmulti`:
 
 * `scxstp` and `scxxs0`–`scxxs3` are present when `Zcx` and the supervisor extension (`S`) are present.
 * `scxNxs` registers are present when `Zcxmulti` and `S` are present.
-  * Note: the spec text says "The privileged CSRs and opcodes are present when `Zcxmulti` is present and the supervisor extension is present," which read in isolation would condition `scxstp`/`scxxs0`–`scxxs3` on `Zcxmulti` as well; this doc assumes the narrower reading — see Open Questions.
+  * Note: the spec text says "The privileged CSRs and opcodes are present when `Zcxmulti` is present and the supervisor extension is present," which read in isolation would condition `scxstp`/`scxxs0`–`scxxs3` on `Zcxmulti` as well; this doc assumes the narrower reading — see Discussion.
 * When the supervisor extension is not present, `cxsel` is interpreted as in Direct mode.
 
 ### `scxstp` — CX Selection Translation Pointer
@@ -226,7 +235,7 @@ Defines which custom extensions qualify as *composable*. A composable custom ext
 A custom extension is composable **if-and-only-if** all of the following hold:
 
 1. Its instructions appear to execute, one-at-a-time, in program order on the local hart.
-2. Quoted verbatim due to the implementation-critical composable-state list (and a possible inconsistency regarding PC — see Open Questions):
+2. Quoted verbatim due to the implementation-critical composable-state list (and a possible inconsistency regarding PC — see Discussion):
 
    > Each of its instructions only reads some *composable state*, computes a pure function of this state (and no other state), then either raises an exception or writes some composable state. *Composable state* comprises the selected extension's state, including its custom CSRs, plus the hart's integer registers, floating-point registers, `fcsr` CSR, vector registers, vector context status in `mstatus` and in `vsstatus`, `vtype`, `vl`, `vlenb`, `vstart`, `vcsr` CSRs, PC, and loads and stores to memory as if performed by the local hart.
 
@@ -536,7 +545,7 @@ The platform-specific discovery mechanisms and OS interfaces referenced by the I
 * New ELF `e_flags` bit `EF_RISCV_RVCX`: set when the binary is compiled with the CX-aware calling convention. Linker policy: report errors when linking object files with different values for the CX field.
 * **Default calling convention** (ABI wording): custom extension state is not preserved across function calls; `cxsel` is not preserved across function calls; procedures may assume `cxsel` is zero upon entry and zero upon return from a procedure call. Software that sets `cxsel` to a non-zero value must set it to zero before returning or calling another procedure.
 * **CX calling convention** (`riscv_cx_cc` attribute): custom extension state is preserved across function calls; `cxsel` is preserved across function calls; procedures may assume `cxsel` is zero upon entry. Software that sets `cxsel` to a non-zero value must set it to zero before calling another procedure.
-  * Note: it is unclear how this "zero upon entry" assumption combines with the API chapter's "callee preserves the caller's current selection (callee saved)" — see Open Questions.
+  * Note: it is unclear how this "zero upon entry" assumption combines with the API chapter's "callee preserves the caller's current selection (callee saved)" — see Discussion.
 
 ### Linux
 
@@ -556,7 +565,7 @@ The user-space interface for CXs in Linux; supports a single shared context per 
 
 * `prctl(PR_RISCV_CX_QUERY, unsigned long *cxid, uuid_t *uuid, unsigned int flags)` — query the CX UUID for a given `cxid`; with `flags = RISCV_CX_QUERY_CXID`, returns the `cxid` for a given `uuid`.
 * `prctl(PR_RISCV_CX_ENABLE, unsigned long cxid, unsigned long *sel, unsigned int flags)` — request enabling the CX specified by `cxid` for the current process; on success returns in `sel` a CX selector usable to select the CX. A CX may be enabled multiple times; each enable must be matched with a corresponding disable before the extension is disabled. `flags` is currently unused and must be zero.
-  * Note: the spec text says the selector "may be used by the `cxsel` instruction"; the ISA chapter's context-switch example likewise uses a `cxsel` mnemonic, so this may be earlier naming for `cxsetsel`. See Open Questions.
+  * Note: the spec text says the selector "may be used by the `cxsel` instruction"; the ISA chapter's context-switch example likewise uses a `cxsel` mnemonic, so this may be earlier naming for `cxsetsel`. See Discussion.
 * `prctl(PR_RISCV_CX_DISABLE, unsigned long sel)` — request disabling the CX specified by `sel`, the selector previously returned by a corresponding enable call.
 
 **System call behavior**: CX framework state and custom extension state are preserved across system calls.
@@ -584,7 +593,7 @@ Nothing to capture from these (listed so future spec-vs-doc comparisons don't re
 * **Logic Interface** (`li`) — stub; a TIP to "specify a logic signal level interface for composable custom extensions."
 * **Guidance** (`guidance`, Appendix B) — empty Software/Hardware Recommendations headings; marked wholly non-normative.
 * **Appendix A stubs** — ACPI (table definition TBD), User Space API (covered by the CX API chapter), SBI (unclear if an SBI extension is necessary).
-* **`cxsel-format.adoc`** — exists in the spec `src/` directory but is not included by any chapter, so it is absent from the built document — see Open Questions.
+* **`cxsel-format.adoc`** — exists in the spec `src/` directory but is not included by any chapter, so it is absent from the built document — see Discussion.
 
 ---
 
@@ -605,7 +614,7 @@ Nothing to capture from these (listed so future spec-vs-doc comparisons don't re
 
 ---
 
-## Open Questions
+## Discussion
 
 * **§cxsel — URO vs. WARL**: `cxsel` is URO (writes via Zicsr raise illegal instruction) but is also described as WARL. Per TG discussion, `cxsetsel` is intended to be the only way to update `cxsel`, so URO is correct; the WARL wording dates from an earlier draft in which the update path was a CSR write rather than an instruction. The likely intent is that `cxsetsel` behaves exactly like a CSR write to a WARL CSR, with the added feature of returning the old value into `rd`.
   * status: Resolved per TG discussion — URO is correct, and is hardware-enforced by QEMU because the temporary address used for this implementation falls in a predefined URO range; WARL describes value-legalization behavior on the `cxsetsel` write path.
@@ -636,7 +645,50 @@ Nothing to capture from these (listed so future spec-vs-doc comparisons don't re
   * Proposed: `cxsdatai` = access-and-increment; `cxsdata` = plain access (no `cxsidx` side effect).
   * status: Tabled.
 
-* **HARTs with heterogeneous CX support**: How exactly does `cx_open` operate on a hart that lacks CX hardware? Possibly use `sched_setaffinity()` to pin to CX-capable harts, having used `riscv_hwprobe()` for per-core extension detection in Linux. Is this even allowed? Will the final solution be OS-specific? What about other topologies of harts, CXs, and CX state contexts?
+* **HARTs with heterogeneous CX support**: How exactly does `cx_open` operate on a hart that lacks CX hardware? Possibly use `riscv_hwprobe()` for per-core extension detection in Linux, then `sched_setaffinity()` to pin to CX-capable harts (see example 1 below) — or negotiate the hardware configuration directly with the kernel, as ARM SVE's `prctl(PR_SVE_SET_VL, ...)` does for vector length, avoiding cross-core pinning entirely (see example 2 below). Will this topology be allowed? Will the final solution be OS-specific? What about other topologies of harts, CXs, and CX state contexts?
+
+  Example 1 — detect via `riscv_hwprobe()`, then pin via `sched_setaffinity()`:
+
+  ```c
+  #include <sys/syscall.h>
+  #include <sched.h>
+
+  // 1. Detect available extensions via hwprobe
+  // 2. Find which cores have those extensions (parse /sys or device tree)
+  // 3. Use sched_setaffinity() to pin to compatible cores
+  // 4. Optionally install signal handler for SIGILL to catch illegal instructions
+
+  void setup_for_vector_code() {
+      // Step 1: Check if ANY core has vector
+      struct riscv_hwprobe probe = {
+          .key = RISCV_HWPROBE_KEY_IMA_EXT_0
+      };
+      syscall(__NR_riscv_hwprobe, &probe, 1, 0, NULL, 0);
+
+      if (!(probe.value & RISCV_HWPROBE_EXT_ZVE64D)) {
+          fprintf(stderr, "No vector extension available\n");
+          exit(1);
+      }
+
+      // Step 2: Pin to cores with vector (hardcoded for now)
+      cpu_set_t cpuset;
+      CPU_ZERO(&cpuset);
+      CPU_SET(0, &cpuset);  // Assuming CPU 0 has vector
+      sched_setaffinity(0, sizeof(cpuset), &cpuset);
+
+      // Step 3: Now safe to use vector instructions
+  }
+  ```
+
+  Example 2 — negotiate directly with the kernel instead of pinning, as in ARM SVE:
+
+  ```c
+  #include <sys/prctl.h>
+
+  // Ask the kernel for a 256-byte vector length; no cross-core pinning needed
+  int vl = prctl(PR_SVE_SET_VL, 256);
+  ```
+
   * status: Tabled — exactly which topologies are allowed, and the normative behavior or mechanisms for implementation have not been decided. Probably out of scope for this project. If project completes early, it can be revisited.
 
 * **`cxsetsel` atomicity scope**: The spec says `cxsetsel` "atomically swaps" `cxsel` and a register. Atomic with respect to what — interrupts on the same hart, context switches, memory visibility across harts? RISC-V typically reserves "atomic" language for AMO instructions, so the intended scope is not obvious here.

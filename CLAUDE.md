@@ -283,7 +283,7 @@ feat/<block>  ← one branch per block, cut from cxtg-dev
 
 See `runtime-cxtg/docs/progress.md` for current block status and release notes.
 See `runtime-cxtg/docs/CXTG_QEMU_Action_Plan.md` for full block specs.
-See `runtime-cxtg/docs/todo.md` for deferred decisions and open questions.
+See `runtime-cxtg/docs/todo.md` for deferred implementation decisions.
 
 ## Wiki
 
