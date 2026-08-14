@@ -275,7 +275,7 @@ feat/<block>  ← one branch per block, cut from cxtg-dev
 5. At phase milestone (all blocks in phase green): merge `cxtg-dev` → `cxtg` and tag (e.g. `cxtg-v0.phase1`).
 6. After tagging: in `runtime-cxtg`, commit the updated submodule pointer on `cxtg-dev`, merge `cxtg-dev` → `cxtg`, and apply the same tag.
 
-**Rule:** never commit directly to `cxtg` or `cxtg-dev`. All changes come through a `feat/` branch.
+**Rule:** never commit directly to `cxtg` or `cxtg-dev`. All code changes come through a `feat/` branch. Exception: documentation-only changes (`Composable-Extensions.md`, `spec.md`, `CLAUDE.md`) go directly to `cxtg-dev`.
 
 **Commits:** always ask the user "Ready to commit?" and wait for confirmation before staging any files or running `git add` / `git commit`.
 
