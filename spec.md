@@ -465,7 +465,7 @@ make check-qtest
 
 ## Commit History
 
-see `../docs/progress.md`
+see `../docs/CHANGELOG.md`
 
 ## Contact
 
