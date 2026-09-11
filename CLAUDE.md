@@ -295,4 +295,4 @@ Every file touched by this project has a corresponding wiki page under `runtime-
 
 **When renaming a symbol:** update the sub-page filename and the bullet link text in the corresponding Format B main page. The sub-page `.md` filename must match the current symbol name — a stale filename breaks Obsidian links silently.
 
-**New files:** if the file has no wiki page yet, add it to `runtime-cxtg/wiki/index.md` and create its page at `runtime-cxtg/wiki/runtime-cxtg/qemu-cxtg/<path-to-file>.md` before moving on.
+**New files:** if the file has no wiki page yet, add it to `runtime-cxtg/wiki/index.md` and create its page at `runtime-cxtg/wiki/runtime-cxtg/qemu-cxtg/<path-to-file>.md` before moving on. Exception: `docs/adr/**` in `runtime-cxtg` is exempt from wiki pages (see `runtime-cxtg/wiki/schema.md`).
