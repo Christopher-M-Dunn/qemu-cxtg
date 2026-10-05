@@ -616,193 +616,121 @@ Nothing to capture from these (listed so future spec-vs-doc comparisons don't re
 
 ## Discussion
 
-* **§cxsel — URO vs. WARL**: `cxsel` is URO (writes via Zicsr raise illegal instruction) but is also described as WARL. Per TG discussion, `cxsetsel` is intended to be the only way to update `cxsel`, so URO is correct; the WARL wording dates from an earlier draft in which the update path was a CSR write rather than an instruction. The likely intent is that `cxsetsel` behaves exactly like a CSR write to a WARL CSR, with the added feature of returning the old value into `rd`.
-  * status: Resolved per TG discussion — URO is correct, and is hardware-enforced by QEMU because the temporary address used for this implementation falls in a predefined URO range; WARL describes value-legalization behavior on the `cxsetsel` write path.
+* **§cxsel — URO vs. WARL**: `cxsel` is URO (writes via Zicsr raise illegal instruction) but is also described as WARL.
+  * status: Resolved — `cxsetsel` is the only way to update `cxsel`, so URO is correct; WARL describes the value-legalization scheme on the `cxsetsel` write path. Implementation: [ADR-027](../docs/adr/027.md).
 
 * **§cxsetsel — illegal instruction conditions**: Under what conditions, if any, is `cxsetsel` itself an illegal instruction (candidates: `scxstp.mode` = Disabled, `sstateen0.C` = 0)?
-  * status: Open. Project assumption: illegal in both cases.
+  * status: Resolved — both apply. `scxstp.mode` = Disabled: Action Plan Block 2.2. `sstateen0.C`/`mstateen0.C` = 0: Action Plan Block 7.1, which lists `cxsetsel` explicitly among the gated CSRs/instructions.
 
 * **§cxsel — "built-in custom extension" used before it is defined in spec**: `cxsel = 0` selects the "built-in custom extension" before the term is introduced. A definition prior to first use might help readers.
   * status: Resolved for this project — spec may adjust if appropriate.
 
 * **§cxsetsel — Does "CX instructions treated as illegal" include `cxsetsel`?**: When `cxsel` is invalid, "CX instructions are treated as illegal instructions." It is not explicit whether `cxsetsel` — a CX framework instruction, not a CX-dispatched instruction — is subject to this restriction.
-  * status: Resolved by reading — cxsetsel is the only way to change cxsel back to a valid value, so it presumably is not included. Depending on intent, it's possible that the wording just needs to be changed to "custom operations" (a defined term) or that "CX instructions" could be added to the definitions.
+  * status: Resolved by reading — `cxsetsel` is the only way to change `cxsel` back to a valid value, so it presumably is not included. Depending on intent, the wording may just need to change to "custom operations" (a defined term), or "CX instructions" could be added to the definitions.
 
 * **§cxsidx repeated text**: "The read-write WARL XLEN-wide CX >>>>state index>>>>> CSR" — appears to be accidentally duplicated text in the spec source (`isa-state.adoc`).
   * status: Resolved — looks like a small editing artifact; worth mentioning upstream.
 
 * **CX CSR interrupt atomicity**: Can CX CSR operations (particularly `cxsdata` read-modify-write plus `cxsidx` auto-increment) be interrupted mid-execution with visible partial state? Does the ISA define restart semantics?
-  * status: Resolved by reading — CSR instructions are single hardware operations; the read-modify-write and cxsidx auto-increment are taken to be atomic as a unit, following from the base ISA, so no restart semantics appear to be needed.
+  * status: Resolved by reading — CSR instructions are single hardware operations; the read-modify-write and `cxsidx` auto-increment are taken to be atomic as a unit, following from the base ISA, so no restart semantics appear to be needed.
 
-* **`cxsidx` out-of-bounds behavior**: The spec says `cxsdata` access with invalid `cxsidx` is "undefined," and `cxsidx` after the last word is "undefined." Implementation must choose one:
-  * (a) Trap (`ILLEGAL_INST`) on any `cxsdata` access where `cxsidx >= state_size` — enforced in predicates once `state_size` is wired up (Block 4.2).
-  * (b) Clamp: `cxsidx` stops incrementing at `state_size-1`, and out-of-bounds writes clamp to `state_size-1`; the caller could potentially detect end-of-state this way, but should not, as this behavior is non-normative.
-  * (c) Silent wrap / undefined — no enforcement.
-  * status: Resolved by reading of spec intent — the spec appears to leave out-of-bounds behavior to software; QEMU implementation will therefore be (c) undefined/no enforcement, with possible internal guard to be determined in Block 4.2.
+* **`cxsidx` out-of-bounds behavior and the state-size bound**: the spec leaves `cxsdata` access with invalid `cxsidx` and `cxsidx` past the last word as explicitly undefinded, and `cxsidx`'s own legal upper bound as unsettled.
+  * status: Ambiguous — spec leaves this to the implementation. Implementation: [ADR-021](../docs/adr/021.md).
 
-* **`cxsdata` auto-increment**: Should there be a non-incrementing version of `cxsdata`? If so, the current auto-incrementing CSR could be renamed `cxsdatai` and a new non-incrementing `cxsdata` added.
-  * Current: `cxsdata` = access-and-increment (for sequential spill/fill).
-  * Proposed: `cxsdatai` = access-and-increment; `cxsdata` = plain access (no `cxsidx` side effect).
-  * status: Tabled.
+* **`cxsdata` auto-increment**: should there be a non-incrementing version of `cxsdata`?
+  * status: Proposed, tabled. Implementation: [ADR-022](../docs/adr/022.md).
 
-* **HARTs with heterogeneous CX support**: How exactly does `cx_open` operate on a hart that lacks CX hardware? Possibly use `riscv_hwprobe()` for per-core extension detection in Linux, then `sched_setaffinity()` to pin to CX-capable harts (see example 1 below) — or negotiate the hardware configuration directly with the kernel, as ARM SVE's `prctl(PR_SVE_SET_VL, ...)` does for vector length, avoiding cross-core pinning entirely (see example 2 below). Will this topology be allowed? Will the final solution be OS-specific? What about other topologies of harts, CXs, and CX state contexts?
-
-  Example 1 — detect via `riscv_hwprobe()`, then pin via `sched_setaffinity()`:
-
-  ```c
-  #include <sys/syscall.h>
-  #include <sched.h>
-
-  // 1. Detect available extensions via hwprobe
-  // 2. Find which cores have those extensions (parse /sys or device tree)
-  // 3. Use sched_setaffinity() to pin to compatible cores
-  // 4. Optionally install signal handler for SIGILL to catch illegal instructions
-
-  void setup_for_vector_code() {
-      // Step 1: Check if ANY core has vector
-      struct riscv_hwprobe probe = {
-          .key = RISCV_HWPROBE_KEY_IMA_EXT_0
-      };
-      syscall(__NR_riscv_hwprobe, &probe, 1, 0, NULL, 0);
-
-      if (!(probe.value & RISCV_HWPROBE_EXT_ZVE64D)) {
-          fprintf(stderr, "No vector extension available\n");
-          exit(1);
-      }
-
-      // Step 2: Pin to cores with vector (hardcoded for now)
-      cpu_set_t cpuset;
-      CPU_ZERO(&cpuset);
-      CPU_SET(0, &cpuset);  // Assuming CPU 0 has vector
-      sched_setaffinity(0, sizeof(cpuset), &cpuset);
-
-      // Step 3: Now safe to use vector instructions
-  }
-  ```
-
-  Example 2 — negotiate directly with the kernel instead of pinning, as in ARM SVE:
-
-  ```c
-  #include <sys/prctl.h>
-
-  // Ask the kernel for a 256-byte vector length; no cross-core pinning needed
-  int vl = prctl(PR_SVE_SET_VL, 256);
-  ```
-
-  * status: Tabled — exactly which topologies are allowed has not been decided, but it has been decided in `Requirements.md` that "performance and topology information ... to optimize scheduling based on system specific characteristics" is excluded. That makes testing multiple topologies of limited value to this project and likely out of scope. If project completes early, perhaps it can be revisited.
+* **HARTs with heterogeneous CX support**: how does `cx_open` operate on a hart that lacks the requested CX's hardware?
+  * status: Tabled, out of scope for now. Implementation: [ADR-023](../docs/adr/023.md).
 
 * **`cxsetsel` atomicity scope**: The spec says `cxsetsel` "atomically swaps" `cxsel` and a register. Atomic with respect to what — interrupts on the same hart, context switches, memory visibility across harts? RISC-V typically reserves "atomic" language for AMO instructions, so the intended scope is not obvious here.
   * status: Resolved by reading — atomicity is taken to be instruction-scoped (single instruction, not interruptible mid-execution on the executing hart), with no cross-hart memory visibility implied. An explicit statement in the spec would confirm this.
 
-* **`cxsdata` when `cxsel = 0`**: The spec defines `cxsdata` access as undefined when `cxsel` is 0 — the built-in extension (CX ID 0) has no state context accessible via `cxsidx`/`cxsdata`. The API is consistent and explicit: `cx_save`/`cx_restore` return 0 bytes when the current selection is `cx_sel_builtin` (−1/`EBADF` is reserved for *invalid* selections), so the ISA-level behavior of these CSRs at `cxsel = 0` never matters to conforming software, and no added ISA restriction is needed.
-  * status: Resolved — the undefinedness is intentional; the TG explicitly rules out `cxsidx`/`cxsdata` path availability for the built-in extension, though that may change in the future. Whether cx-aware software should be able to co-opt the CX infrastructure for built-in custom instructions remains a separate unresolved idea (`scx0xs0`/`scx0xs1` are unlikely to be made available; bits `[1:0]` of `scxxs0` are currently reserved — they could be designated for custom use but will likely stay reserved). Likely out of scope for this project.
+* **`cxsdata` when `cxsel = 0`**: the spec defines `cxsdata` access as undefined when `cxsel` is 0 — the built-in extension (CX ID 0) has no state context accessible via `cxsidx`/`cxsdata`.
+  * status: Ambiguous — spec explicitly doesn't support this (reserved), actual behaviour is left to the implementation. Implementation: [ADR-024](../docs/adr/024.md). A related idea (co-opting reserved `scxxs[1:0]` bits for builtin-extension status) is tracked separately: [ADR-025](../docs/adr/025.md).
 
-* **`scxstp` reset value**: The spec does not specify the reset value of `scxstp`. If reset to 0 (Disabled), all CX use traps immediately from boot. If reset to 1 (Direct), CX is available immediately.
-  * status: Open — TG intent is that built-in instructions are immediately available at reset, but since `cxsel` resets to 0 (`cx_sel_builtin`), this requirement is satisfied regardless of `scxstp.mode` (0, 1, or 2 with a properly initialized table). Project assumption: reset value = 0 (Disabled).
+* **`scxstp` reset value**: the spec does not specify `scxstp`'s reset value.
+  * status: Ambiguous — spec omits this detail (most likely unintentionally). Implementation: [ADR-026](../docs/adr/026.md).
 
-* **Indirect mode `cxsel` bounds**: In indirect mode the 4 KiB table holds 1024 32-bit entries. The spec does not state what happens when `cxsel >= 1024`. Illegal instruction exception, or `cxsel` masked to table size?
-  * status: Open — RISC-V priv spec §2.3.3 does not appear to distinguish valid vs. legal values — valid is a TG sub-category of legal; only hard requirement is that `cxsel` can hold all valid values and any value the discovery mechanism may return. A register diagram for `cxsel` might help settle this (see also the `cxsel-format.adoc` question below). Project assumption: all custom instructions/CSR accesses with indirect table index < 0 or > 1023 raise illegal instruction. Mechanism deferred; some QEMU implementation options are: clamp to index 1023 (implementation keeps as reserved, always holding the invalid selector ~0), trap on table lookup without clamping, or clamp `cxsel` itself to ~0, or flip the MSB as an `inv` bit. Leaning toward no clamping on `cxsel` (or clamp to −1) on out-of-bounds lookup during `cxsetsel`; perform the table lookup on each CX instruction dispatch with no detranslated state stored. Final approach depends on indirect mode implementation in Block 6.3.
-    - TG discussion (2026-08-14): no firm decision on timing, but consensus not to forbid caching. Absent an `sfence`-equivalent, some other change-signal is needed — some candidates: re-executing `cxsetsel` with the same selector after an OS table edit (basis spec's approach), or some other defined action. TG receptive to specifying a behavioral *contract* ("act as if translated every instruction") over mandating timing, freeing implementers to optimize. Jan suggested adapting the basis spec's approach, adding a redirection level when Hypervisor is present. See `scx_invalidate` and hart↔context cardinality items below.
+* **Indirect mode `cxsel` bounds**: in Indirect mode the 4 KiB table holds 1024 32-bit entries; the spec does not state what happens when `cxsel >= 1024`.
+  * status: Ambiguous — spec leaves this to the implementation. A register diagram for `cxsel` might help settle this (see the `cxsel-format.adoc` item below). Implementation: [ADR-027](../docs/adr/027.md).
 
-* **`scxxs` state machine**: The spec says `scxxs` bits are "analogous to `FS`/`VS` bits in `mstatus`" but does not define the CX context state machine explicitly. Is the full four-state model (Off / Initial / Clean / Dirty) adopted? What events drive each transition?
-  * status: Resolved by analogy — full four-state model (Off/Initial/Clean/Dirty) adopted per priv spec §3.1.6.7 Table 12; transitions map directly: Off traps on CX instructions; Initial/Clean→Dirty on state-modifying CX instructions; Dirty→Clean on context save; any non-Off→Initial on cxdiscard/scxdiscard; explicit scxxs write drives Off/enable transitions. Without Zcxmulti, scxxs is writable (like FS/VS); with Zcxmulti, scxxs is a read-only summary (like XS) and scxNxs holds per-context status. CXs with zero-sized state use only Off and Initial (no Clean or Dirty, as they have no state to save). If the analogy is exact, reproducing the state-transition table in the CX spec would save readers the cross-reference; if it is not exact, the differences would be good to know — the implementation currently assumes the direct mapping.
+* **`scxxs` state machine**: the spec says `scxxs` bits are "analogous to `FS`/`VS` bits in `mstatus`" but does not define the CX context state machine explicitly.
+  * status: Resolved by analogy. Implementation: [ADR-028](../docs/adr/028.md), which also records a related spec clarification, [ADR-029](../docs/adr/029.md).
 
-* **`scxNxs` as future indirect CSRs**: The spec states `scxNxs` registers "are expected to become indirect CSRs" and `Zcxmulti` "will require `Sscsrind`" — both in future tense, so `Sscsrind` is not yet a normative requirement. That said, allocating over a hundred direct CSR addresses seems impractical and no alternative is described, so `Sscsrind` appears to be effectively required to implement the design as written; Block 6.4 will treat it as such.
-  * status: Open — spec wording is future tense but Sscsrind is treated as a current requirement for this project; Block 6.4 will implement scxNxs as indirect CSRs via Sscsrind. If that matches TG intent, normative wording would confirm the approach.
+* **`scxNxs` as future indirect CSRs**: the spec states `scxNxs` registers "are expected to become indirect CSRs" and `Zcxmulti` "will require `Sscsrind`" — both in future tense.
+  * status: Resolved by reading — treated as a current requirement regardless of tense. Implementation: [ADR-030](../docs/adr/030.md).
 
 * **`cxdiscard` vs. `scxdiscard`**: `isa-state.adoc` defines `cxdiscard` (unprivileged) as informing the runtime that state need not be saved — it does **not** write state, only sets XS to `Initial`. `isa-priv.adoc` defines `scxdiscard` (privileged) as **overwriting** the context (state becomes UNSPECIFIED), then setting XS to `Initial`. These read as two distinct operations with different semantics.
-  * status: Open — it is unclear whether cxdiscard and scxdiscard are ISA opcodes, CSR operations, API calls, or some combination; and whether 0, 1, or 2 encodings are needed to cover the unprivileged hint and privileged overwrite semantics. Awaiting spec clarification. Tenative project assumptions: cxdiscard is a non-custom ISA opcode. scxdiscard will function as a hardware init, performed by the CXU (and constrained to the same CX-specific latency and order of execution requirements as any other instruction in that CX). Method of delivering the signal is deferred, some options are: designated CFID ( and gating for privilege might not be so straightforward), a write to a supervisor custom or non-custom CSR, or a non-custom opcode -> dedicated signal through the logic interface.
-    - TG discussion — see [ADR-017](../docs/adr/017.md).
+  * status: Open — TG discussion ongoing. See [ADR-017](../docs/adr/017.md), which also covers CX initialization procedure and data-leakage considerations.
 
-* **Smstateen default behavior for CX CSR access**: The spec states `mstateen0.C` must be set to enable CX custom state access but does not specify the behavior when it is not set. Per the Smstateen spec, accesses with the bit clear raise illegal instruction; this is assumed to be the expected behavior for CX CSR accesses when `mstateen0.C = 0`.
-  * status: Resolved by assumption — standard Smstateen behavior applies; CX CSR accesses raise illegal instruction when mstateen0.C = 0.
+* **Smstateen default behavior for CX CSR access**: the spec states `mstateen0.C` must be set to enable CX custom state access but does not specify the behavior when it is not set.
+  * status: Resolved by assumption — standard Smstateen behavior applies (accesses raise illegal instruction when the bit is clear); matches Action Plan Block 7.1.
 
-* **`scxstp.mode = 2` when `Zcxmulti` is absent**: Writing mode = 2 (Indirect) to `scxstp` when `ext_zcxmulti` is not enabled: behavior TBD. Options: WARL-clamp on write, or silently stored but trap on first CX instruction. Awaiting TG clarification.
-  * status: Resolved by WARL — spec table lists mode 2 as "Zcxmulti only"; since scxstp is WARL, writing an invalid mode is a WARL write. Project implementation: clamp mode 2 to 1 (Direct), with all other bits = 0. Any attempted write with a reserved mode (3-15) is ignored.
+* **`scxstp.mode = 2` when `Zcxmulti` is absent**: writing mode = 2 (Indirect) to `scxstp` when `ext_zcxmulti` is not enabled: behavior TBD.
+  * status: Resolved by WARL. Implementation: [ADR-004](../docs/adr/004.md).
 
-* **CX thread-scoped selectors and OS context switch**: `cx_sel_t` values are thread-scoped, but `cxsel` is a hart CSR. On a context switch, `cxsel` must be saved/restored as part of the thread context. Is this the responsibility of the OS kernel or the CX runtime? Unresolved. The same class of question extends one layer up to a hypervisor remapping a guest's selectors underneath it — not just an OS-level thread context switch.
-  * status: Resolved in part — spec requires cxsel be saved as thread context; project assumption is kernel task_struct (analogous to fcsr for floating point). ucontext_t support (cx_open_ucontext) deferred.
+* **CX thread-scoped selectors and OS context switch**: `cx_sel_t` values are thread-scoped, but `cxsel` is a hart CSR; on a context switch `cxsel` must be saved/restored as part of the thread context — whose responsibility is that?
+  * status: Resolved in part. OS saves selector. Implementation: [ADR-031](../docs/adr/031.md).
 
-* **Exclusive vs. shared CX instances on an OS supporting only one model**: The spec notes (non-normatively): "TODO: detail how both shared and exclusive CX models live atop an OS that supports only one, or the other." Unresolved. Impact on runtime implementation TBD.
+* **Exclusive vs. shared CX instances on an OS supporting only one model**: the spec notes (non-normatively): "TODO: detail how both shared and exclusive CX models live atop an OS that supports only one, or the other."
   * status: Open — unresolved in spec; impact on runtime implementation TBD.
 
-* **§isa-priv — privileged CSR presence condition**: The spec states "The privileged CSRs and opcodes are present when `Zcxmulti` is present and the supervisor extension is present," while the CSR tables are explicitly split between `Zcx` (`scxstp`, `scxxs0`–`scxxs3`) and `Zcxmulti` (`scxNxs`). Read literally, the sentence would condition all of these on `Zcxmulti`, leaving base `Zcx` with no mode-control register — so the sentence likely applies only to the `Zcxmulti`-specific CSRs
-  * status: Resolved by this reading for now: scxstp and scxxs0–scxxs3 are conditioned on Zcx + S; scxNxs registers are conditioned on Zcxmulti + S. Possibly a wording oversight; will raise with the TG to confirm.
+* **§isa-priv — privileged CSR presence condition**: the spec states "The privileged CSRs and opcodes are present when `Zcxmulti` is present and the supervisor extension is present," while the CSR tables are explicitly split between `Zcx` (`scxstp`, `scxxs0`–`scxxs3`) and `Zcxmulti` (`scxNxs`). Read literally, the sentence would condition all of these on `Zcxmulti`, leaving base `Zcx` with no mode-control register.
+  * status: Resolved by this reading — `scxstp`/`scxxs0`–`scxxs3` conditioned on `Zcx` + S; `scxNxs` conditioned on `Zcxmulti` + S; matches the Action Plan's Build Configuration Matrix (§4). Possibly a spec wording oversight; will raise with the TG to confirm.
 
-* **Single `cxsel` and the four custom opcode spaces**: A proposal was made for multiple simultaneous selection registers (`cxsel0`/`cxsel1`/..., one per custom opcode space).
-  * status: Tabled by the TG as a currently unimplemented nice-to-have, likely not to be revisited until everything else works; this project follows suit. See `Requirements.md` "splitting the opcode space" and "multiple opcode spaces".
+* **Single `cxsel` and the four custom opcode spaces**: a proposal was made for multiple simultaneous selection registers (`cxsel0`/`cxsel1`/..., one per custom opcode space).
+  * status: Tabled by the TG. Implementation: [ADR-041](../docs/adr/041.md).
 
-* **State management as a separate extension**: Is the state management functionality (cxsidx, cxsdata, cxdiscard) intended to be a separate, optional extension (e.g., `Zcxstate`) that can be implemented independently of the base CX multiplexing extension, or is it always bundled with `Zcx`?
+* **State management as a separate extension**: is the state management functionality (`cxsidx`, `cxsdata`, `cxdiscard`) intended to be a separate, optional extension (e.g. `Zcxstate`), or always bundled with `Zcx`?
   * status: Open — spec description hints at it being a separate extension. Awaiting spec clarification.
 
-* **Replacement for the R (ready/busy) flag**: The basis spec included an R flag to indicate whether a CX is busy. This is especially useful during hardware initialization. It is not present in the current spec. Is there a successor mechanism, or is it intentionally dropped? How does software determine that a CX is ready to accept operations vs. busy?
-  * status: Open — awaiting spec clarification, but it looks like it is intentionally dropped. Use CX-specific CSRs according to CX contract.
+* **Replacement for the R (ready/busy) flag**: the basis spec included an R flag to indicate whether a CX is busy, especially useful during hardware initialization. It is not present in the current spec.
+  * status: Open — awaiting spec clarification, but appears intentionally dropped; use CX-specific CSRs per CX contract.
 
-* **`cx_status` CSR or `get_status` opcode**: State status Dirty-Clean is moved out to `scxNxs` and `state_size` is moved out to platform-specific discovery. The `cx_status` CSR and `get_status` instruction appear to have been intentionally superseded, like their context management counterparts, but `Requirements.md` still lists "collect accumulated errors..." as settled.
-  * status: Open — currently reading this as any CX-specific status signaling will be handled by individual CX contract specifications in CX CSRs. If the TG is removing the accumulator, `Requirements.md` should be corrected; worth raising with the TG.
+* **`cx_status` CSR or `get_status` opcode**: state status Dirty/Clean moved to `scxNxs`, `state_size` moved to platform-specific discovery — the `cx_status` CSR and `get_status` instruction appear intentionally superseded, but `Requirements.md` still lists "collect accumulated errors..." as settled.
+  * status: Open — reading any CX-specific status signaling as handled by individual CX contracts in CX CSRs. If the TG is removing the accumulator, `Requirements.md` should be corrected; worth raising with the TG.
 
-* **CX initialization procedure and data leakage**: The spec indicates CX initialization is performed according to individual CX specifications, which implies it occurs in userspace. Is that sufficient? What prevents stale state from a prior context from leaking to a new user of the same CX context?
-  * status: Monitoring for spec clarification — `Requirements.md` "CX state context initialization may support flash ... self-initialization". The closest thing to that in the spec is `scxdiscard`. For now, reading it as: upon initial `cx_open` the S-Mode runtime must execute `scxdiscard` (if supported), or write 0 to `cxsdata` at every `cxsidx`, after which the CX library can do any additional CX-specific initialization it may require. There is a risk a CX designer will "support" `scxdiscard` as a `NOP` for efficiency, so it may be worth putting a non-normative warning against doing that in the spec, but that's not enough to satisfy `Requirements.md` "Supervisor CX software may be aware of ... flash init, but should not rely on them for proper functional behavior". What happens if the runtime init is interrupted? Project assumption: XS remains Off until the init loop completes, then it is updated to Initial before `cx_open` returns a selector.
+* **`cxsel-format.adoc` — typed `cxsel` layout present in spec source but not in the built document**: `src/cxsel-format.adoc` defines a `cxsel` register layout — bit `XLEN-1` = `inv`, bits `XLEN-2:XLEN-4` = `type`, remaining bits = `sel` — but no chapter includes it, so it doesn't appear in the built document. Bears directly on the Indirect-mode bounds question above.
+  * status: Open — clarification on whether the typed-selector format reflects current intent would be welcome.
 
-* **`cxsel-format.adoc` — typed `cxsel` layout present in spec source but not in the built document**: `src/cxsel-format.adoc` defines a `cxsel` register layout — bit `XLEN-1` = `inv` (invalid selector if set), bits `XLEN-2:XLEN-4` = `type` (0: *off*; 1: *v1*; other: *reserved*), remaining bits = `sel` (type-specific selector value) — but no chapter includes it, so it does not appear in the built document. This bears directly on the ~0/invalid-selector question (a dedicated `inv` MSB matches this project's tentative "MSB = invalid" model), and it is unclear how it maps onto Direct mode's CXID`[7:0]`/IDX`[15:8]` interpretation of `cxsel`.
-  * status: Open — clarification on whether the typed-selector format reflects current intent would be welcome. It may not have been included precisely because the format (e.g., removing the `inv` field) is still under consideration.
-
-* **§criteria — PC in the composable-state list**: Normative criterion 2 includes PC in the composable-state list, while the non-normative rationale re-quotes the criterion *without* PC and says composable state is "still not PC", and the `loop` example is ruled non-composable because "PC access is not *composable state*." The two passages seem to differ, though there may be an intended distinction being missed here (e.g., reading PC vs. writing it).
+* **§criteria — PC in the composable-state list**: normative criterion 2 includes PC in the composable-state list, while the non-normative rationale re-quotes the criterion *without* PC and rules the `loop` example non-composable because "PC access is not *composable state*." The two passages seem to differ.
   * status: Open — possibly an editing artifact; clarification would be welcome. Project assumption until clarified: PC is not writable composable state.
 
-* **CX CC — callee-saved `cxsel` vs. zero-on-entry**: The API chapter's CX calling convention says the "callee preserves the caller's current selection (callee saved)"; Appendix A's psABI CX CC says "procedures may assume that `cxsel` is zero upon entry" and that callers must zero a non-zero `cxsel` before calling. It is unclear how the two statements combine: if `cxsel` is preserved across functions, assuming it is zero on entry doesn't seem to make sense.
+* **CX CC — callee-saved `cxsel` vs. zero-on-entry**: the API chapter's CX calling convention says the callee preserves the caller's current selection (callee saved); Appendix A's psABI CX CC says procedures may assume `cxsel` is zero on entry and that callers must zero a non-zero `cxsel` before calling. It's unclear how the two combine.
   * status: Open — awaiting spec clarification; possibly an inconsistency in Appendix A, or a subtlety not yet understood here.
 
-* **Discovery path split across devicetree / hwprobe / prctl**: `cx_open` maps UUID → selector, but Appendix A splits discovery: devicetree provides UUID per CXID (CXID ≥ 1 only), hwprobe provides the CXID availability bitmask and per-CXID vendorid/archid/impid/context-size (no UUIDs, keys start at CX1), and only `prctl(PR_RISCV_CX_QUERY)` provides the UUID↔CXID mapping to user space, with `prctl(PR_RISCV_CX_ENABLE)` returning the selector. The built-in CX (CXID 0) has no devicetree node and no per-CX hwprobe keys — consistent with `cxsdata` being undefined for `cxsel = 0`. Also, `cx.rst` refers to "the `cxsel` instruction"; the ISA chapter's context-switch example likewise uses a `cxsel` mnemonic, so this may simply be naming that predates `cxsetsel`.
-  * status: Open — earlier working assumption "hwprobe / device tree for discovery" is refined: the UUID lookup path for user space is prctl, not hwprobe. The "cxsel instruction" wording presumably refers to `cxsetsel`. Matches `Requirements.md`: discovery by "a unique CX identifier" is settled, "additional parameters" excluded — `prctl`'s UUID-only query lines up.
+* **Discovery path split across devicetree / hwprobe / prctl**: `cx_open` maps UUID → selector, but Appendix A splits discovery across devicetree, hwprobe, and `prctl` in a way that conflicts with how this project's Action Plan currently implements discovery.
+  * status: Open — conflict with Action Plan Blocks 5.3/5.4 flagged. Implementation: [ADR-040](../docs/adr/040.md).
 
-* **Which unprivileged architecture model (Appendix C)**: Single Hart State Context (CX state treated as hart state, in `ucontext_t`/`setjmp`) vs. Multiple Non-Hart State Contexts (isolated instance per enable). The spec explicitly leaves undetermined which model(s) will be supported. Interacts with the probationary `cx_open_ucontext` flag and the CX-thread-context open question.
-  * status: Open — spec explicitly undecided. Project's ZcxMulti per-context status (`scxNxs`) aligns with the multiple non-hart contexts model; `cx_open_ucontext` remains probationary. Ongoing consideration mirrored in `Requirements.md`: "treats the state context as hart state" vs. "excludes the state context from hart state", plus "more than one state context per hart".
+* **Which unprivileged architecture model (Appendix C)**: Single Hart State Context vs. Multiple Non-Hart State Contexts. The spec explicitly leaves undetermined which model(s) will be supported.
+  * status: Open — spec explicitly undecided. Implementation: [ADR-032](../docs/adr/032.md).
 
-* **§criteria — chapter still evolving (per its own notes)**: The chapter carries a "Requirements (temporary, will be deleted)" note and several NOTEs indicating the normative language is still being developed: memory ordering/partial completion/PMA types, exception constraints, whether "identical" functional behavior is too strong (it would deny e.g. a TRNG CX), and whether privileged-state access will be disallowed.
+* **§criteria — chapter still evolving (per its own notes)**: the chapter carries a "Requirements (temporary, will be deleted)" note and several NOTEs indicating the normative language is still being developed: memory ordering/partial completion/PMA types, exception constraints, whether "identical" functional behavior is too strong (it would deny e.g. a TRNG CX), and whether privileged-state access will be disallowed.
   * status: Open — track spec evolution before treating the criteria as fixed requirements.
 
-* **§api Other TODOs**: The spec flags for revisiting: `cx_uuid` vs. `cxid`; `cxinfo`; `cxsaveall`/`cxrestoreall`; distinguishing `RISCV_CX_INFO_STATE_SIZE` vs. `cx_save(0,0)` size; `hwprobe` keys (Linux); `cxenable`/`cxdisable`.
+* **§api Other TODOs**: the spec flags for revisiting: `cx_uuid` vs. `cxid`; `cxinfo`; `cxsaveall`/`cxrestoreall`; distinguishing `RISCV_CX_INFO_STATE_SIZE` vs. `cx_save(0,0)` size; `hwprobe` keys (Linux); `cxenable`/`cxdisable`.
   * status: Open — all unresolved in spec; awaiting TG.
 
-* **"Valid"/"invalid" selector — several distinct senses**: The terms appear to be used in at least three senses, which mostly work in context but do not quite align:
-  1. *ISA selector-value validity* (`isa-unpriv`): "Valid selector values are 0 ... and any value returned by the platform specific discovery mechanism" — 0 is a **valid** selector value, and CX instructions trap only when `cxsel` is invalid.
-  2. *API instance validity* (`cx_valid`): returns true iff the selector "indicates a valid CX instance on this thread"; "an invalid, built-in, or stale (closed) selector returns false" — so `cx_valid(cx_sel_builtin)` is false even though 0 is ISA-valid, and "invalid" here is one of three false categories rather than simply the complement of valid. `cx_select` uses the same three-way split (valid instance / builtin / invalid).
-  3. *Current-selection validity* (`cx_save`/`cx_restore`): builtin returns 0; −1/`EBADF` is returned "if the current CX selection is invalid" — builtin is not "invalid" here, and stale selectors are presumably folded into "invalid" (consistent with `cx_close`: on last release "the selector value becomes invalid", though `cx_valid` lists stale separately from invalid).
-  Relatedly, `isa-state` has to phrase its exclusions as "0 or invalid" (since 0 is ISA-valid), and `isa-priv` also applies "invalid" to absent registers (`scxxs1`/`scxxs3` on RV64) and to IDX/CXID table-entry fields — further, unrelated senses.
+* **"Valid"/"invalid" selector — several distinct senses**: the terms appear to be used in at least three senses across `isa-unpriv`, the API chapter (`cx_valid`/`cx_select`), and `isa-state`/`isa-priv`, which mostly work in context but don't quite align with each other.
+  * status: Ambiguous. Implementation: [ADR-033](../docs/adr/033.md).
 
-  A reading that holds the definition together: "any value returned by the platform specific discovery mechanism *for use as a selector*" treats the discovery mechanism as the whole discovery stack, including the runtime — `cx_open` (backed by `prctl` on Linux) is what returns values for use as selectors, and it enables certain layers (`scxxs`/`scxNxs` status and translation table entry [likely] and stateen [unlikely] ) before returning, or else fails. Under this reading no selector is ever handed out in a disabled state, and the `cx_sel_invalid` that `cx_open` returns on error is a sentinel — not a value returned "for use as a selector" — so it does not contradict the validity definition. A stale (closed) selector is ISA-invalid: it traps on execution.
-  * status: Open — remaining question under this reading: how does `cx_valid` treat a previously valid selector whose CX has since been disabled (stateen cleared, or status set to Off in `scxxs`/`scxNxs`)? If the CX status bits follow the FS/VS analogy exactly, disabling does not invalidate — state is not destroyed and can be re-enabled — which suggests such a selector remains valid while trapping in the interim; the API chapter does not address this case.
-
-* **§cx_select repeated text**: "custom instructions and custom instructions have undefined behavior" — appears to be accidentally duplicated text ("custom CSR accesses" is presumably meant for one of the two, matching the two preceding clauses).
+* **§cx_select repeated text**: "custom instructions and custom instructions have undefined behavior" — appears to be accidentally duplicated text.
   * status: Resolved — looks like a small editing artifact; worth mentioning upstream.
 
-* **Indirect mode table entry — intended use of the `V` bit**: The spec states only that a CX selection translation table entry with the valid bit (`V`) clear causes custom operations to raise an illegal instruction exception (§2.2.3, Indirect Mode); it says nothing about how or why software would clear `V`, or what is expected to happen afterward. Is `V`'s use above this single trap mechanism entirely non-normative — i.e., does the spec deliberately leave `V` as a minimal valid/invalid signal, free for the OS or runtime to build eviction, lazy context-switching, or virtualization schemes on top of however it sees fit?
-  * status: Open — Project assumption: yes, `V`'s use beyond "clear traps, set does not" is non-normative and left to software; project assumption: `V` is directly analogous to `~cxe`, the basis spec's per-selector "custom operation exception enable" bit (basis spec §2.2.1; see `docs/basis_spec_comparison.md` — historical, non-normative). TG discussion (2026-08-14): eviction scheme confirmed as a working understanding; still undecided whether clearing `V` alone suffices — see the `scx_invalidate` item below.
-    - Lazy switching / eviction: to reassign a hart's physical CX context to a different logical owner, the OS clears `V` on the evicted owner's table entry. The evicted owner's next CX access traps; the handler reads `CXID`/`IDX` out of the now-invalid entry to identify what is owed, restores it, sets `V`, and returns. Restoration is deferred until the context is next actually used.
-    - Software emulation of an absent CX: when a CX is not implemented in this hardware configuration at all, its table entries' `V` are left permanently clear, so every access traps; the handler decodes the trapped instruction and computes its result in software instead of restoring any physical context, then returns. Unlike eviction there is no hardware instance to swap in — this is the basis spec's own stated rationale for `cxe` (§1.4.2/§2.2.1: "software emulation of absent custom instructions" and "software emulation of absent composable extensions").
-    - Proposed rename (2026-08-14 TG meeting): rename `V` to `exception enable` (`XE`or `cxe`), matching the basis spec's naming, with the logic inverted to match — basis spec `cxe`: "When ... cxe=1, a custom operation raises an illegal-instruction exception" (§2.2.1), so set traps and clear dispatches, the reverse of `V`'s current set-is-valid sense.
+* **Indirect mode table entry — intended use of the `V` bit**: the spec states only that a translation-table entry with `V` clear causes custom operations to raise an illegal instruction exception (§2.2.3); it says nothing about how or why software would clear `V`, or what's expected afterward.
+  * status: Open — non-normative, left to software. Eviction/lazy-switching use: [ADR-019](../docs/adr/019.md). Software-emulation-of-absent-CX use and a proposed `V`→`XE` rename: [ADR-034](../docs/adr/034.md).
 
-* **`scx_invalidate(idx)` — possible explicit signaling instruction (project idea, not TG-raised)**: If caching the logical→physical translation is permitted, some signal is needed when a table entry changes underneath a hart already holding that selector. One option not raised at the meeting: a dedicated `scx_invalidate(idx)` instruction, leaving the implementation free to clear `V` and add whatever side effects its topology needs.
-  * status: Open — project idea only, not yet raised with the TG. Complements the Indirect mode `cxsel` bounds and `V` bit items above. Related uncertainty: `prctl(PR_RISCV_CX_DISABLE, sel)` (`### Linux`, above) doesn't say what it writes at the ISA level — `scxxsn`/`scxNxsn` Off, table-entry `V` clear, or some combination. The `§api Other TODOs` item below lists `cxenable`/`cxdisable` among the spec's own self-flagged "revisit" items — the TG already knows this is unresolved. `scx_invalidate` may or may not be the mechanism `cxdisable` ultimately resolves to.
+* **`scx_invalidate(idx)` — possible explicit signaling instruction**: project idea, not raised with the TG.
+  * status: Proposed. Implementation: [ADR-035](../docs/adr/035.md).
 
-* **Number of contexts per hart**: `Requirements.md` offers two options — the number of contexts "must be equal to the number of harts" vs. "may be less than, equal to, or greater than the number of harts".
-  * status: Open — Project model starts with requiring all harts to see an identical CX topology (each with the same dedicated number and size of contexts). Other topologies may be investigated after all basic features are implemented. Indirect mode `cxsel` translation, if cached, may require an invalidation mechanism if that is ever changed to allow any contexts to be shared with multiple harts. It may still be needed in order to support hypervisor (required) and thread migration (desired, but not sure if required). Note also that `Requirements.md` explicitly excludes "changing the number of state contexts dynamically at runtime".
+* **Number of contexts per hart**: `Requirements.md` offers two options for the number of contexts relative to the number of harts.
+  * status: Open. Implementation: [ADR-036](../docs/adr/036.md).
 
-* **A third `scxstp` mode — "Bare" (2026-08-14 TG meeting)**: A third mode was proposed, for M-mode-only lightweight embedded systems — simple direct software control, with no access control (and, by inference, no state management).
-  * status: Open — listed alongside Direct and Indirect as a separate mode in the 2026-08-14 meeting, implying it might be its own `scxstp.mode`, but it may just be a bare-bones implementation of Direct Mode. The spec already says "when the supervisor extension is not present, `cxsel` is interpreted as in Direct mode". (§isa-priv) `Requirements.md` shows "supporting machine mode only systems" as settled, so however it ends up being encoded, this project must support it. It also says "M, S, or U level software can use composable extensions", but the following is excluded: "a system must support ... composable extensions from any privilege level", meaning individual CX operations may be accessible from an implementation-dependent combination of M/S/U modes.
+* **A third `scxstp` mode — "Bare" (2026-08-14 TG meeting)**: proposed for M-mode-only lightweight embedded systems.
+  * status: Open — may be its own `scxstp.mode`, or just describe a bare-bones Direct mode. Tracked: [ADR-042](../docs/adr/042.md). This project's machine-mode-only support commitment, regardless of how "Bare" resolves: [ADR-038](../docs/adr/038.md).
 
-* **RV32/RV64 parity**: `Requirements.md` settles "Support RV32 and RV64, without preference for either."
-  * status: Resolved — Project needs to be updated. `scxxs0`–`scxxs3` and `scxNxs0`/`scxNxs1` register pairing differs by XLEN (RV32: all four registers, and both registers of each pair, are valid; RV64: only the even-numbered registers are present). RV32 therefore exercises status-register logic RV64 never does; test matrices must cover both.
+* **255 CXs vs. 64 `scxxs`/`scxNxs` status slots**: `Requirements.md` settles "at least 255 CXs," matching the 8-bit CXID field in Direct mode, but `scxxs0`–`scxxs3` plus `scxNxs1`–`scxNxs63` together give 2-bit status for only 64 CX IDs.
+  * status: Open — verified, not assumed; worth raising with the TG.
 
-* **Machine-mode-only and machine+user-mode-only systems**: `Requirements.md` settles "Support machine mode only systems" and "Support machine and user mode only systems" alongside "Support supervisor mode operating systems."
-  * status: Resolved — Project needs to be updated. Every phase so far assumes S-mode is present (`scxstp`/`scxxs0`–`scxxs3` are gated on `Zcx` + `S`). The M-mode-only case is the "Bare" mode item above; M+U-mode-only has no home yet. Action Plan needs a block, or block expansion, that varies privilege-mode configuration the way it already varies extension flags. Confirmed 2026-08-18: contrary to the Action Plan's "no S-mode" note (§4), the same `virt` machine and CPU type emulate M-mode-only directly — `-cpu rv64,s=false,h=false,zcx=on` (`h` implies `s`, so both must be dropped) boots and passes `block1_1_csr_stubs.elf`; no separate machine/CPU definition is needed. That Action Plan note needs correcting.
-
-* **State context size bound (512 KiB)**: `Requirements.md` settles "state contexts in size from zero to at least 512 KiB", the concrete figure the `cxsidx` out-of-bounds item above lacked. 512 KiB is 131072 words on RV32, 65536 on RV64 — max valid index 131071 / 65535.
-  * status: Open — the TG has not settled the true legal WARL upper bound on `cxsidx` itself; the two proposals — `CX[cxsel] STATE_NUM_WORDS-1` and `MAX()` of that number across all CXs on the system — read as describing minimum capabilities rather than an exact bound, with the first a subset of the second: any WARL scheme covering at least the second's range satisfies both, as would no bound check at all. Project implementation: bound `cxsidx` to the max valid index for the given XLEN (512 KiB ceiling — 131071 RV32 / 65535 RV64).
-
-* **255 CXs vs. 64 `scxxs`/`scxNxs` status slots**: `Requirements.md` settles "at least 255 CXs" (and CXUs), matching the 8-bit CXID field in Direct mode (`cxsel[7:0]`, up to 256 values). But `scxxs0`–`scxxs3` plus `scxNxs1`–`scxNxs63` together give 2-bit status for only 64 CX IDs (0–63) — on both XLENs, since RV64 drops the odd registers but doubles each register's ID range.
-  * status: Open — verified, not assumed: the addressing space (CXID) and the status/enable-tracking space (`scxxs`/`scxNxs`) are different sizes. Unclear whether a system can have up to 255 addressable CXs with state management enabled on only 63 of them (plus the built-in), or whether 255 was written without accounting for the 64-slot cap. Worth raising with the TG.
-
-* **Performance monitors and debug/trace — excluded**: `Requirements.md` excludes "performance monitors on composable extension specific behavior" and "debugging and tracing composable extension behavior."
-  * status: Resolved — recorded so neither is proposed as a project feature later. No CX-specific performance-counter or debug/trace CSRs, opcodes, or hooks are in scope.
+* **Spec-impacting ADRs and proposals**: see `runtime-cxtg/docs/ADR_log.md`'s `Spec` column: any entry marked `X`, in any of its tables, is a decision or proposal that could still require a change to the actual TG spec text. The `X` clears once the entry no longer would change the spec, or once the spec — and this document — already reflects it (`runtime-cxtg/docs/adr/_schema.md` § Spec-impact flag).
