@@ -733,4 +733,7 @@ Nothing to capture from these (listed so future spec-vs-doc comparisons don't re
 * **255 CXs vs. 64 `scxxs`/`scxNxs` status slots**: `Requirements.md` settles "at least 255 CXs," matching the 8-bit CXID field in Direct mode, but `scxxs0`–`scxxs3` plus `scxNxs1`–`scxNxs63` together give 2-bit status for only 64 CX IDs.
   * status: Open — verified, not assumed; worth raising with the TG.
 
+* **Hypervisor support**: `Requirements.md` lists "Support the hypervisor extension", but the draft spec text defines no VS-level selection translation, no hypervisor-level mapping of a guest's CXID/IDX, and no VS-mode behavior for the CX CSRs; the only references are `hstateen0.C` gating and `vsstatus` in the composable-state list.
+  * status: Open — possibly covered in material not reflected here; clarification on hypervisor intent would be welcome. Tracked: [ADR-047](../docs/adr/047.md).
+
 * **Spec-impacting ADRs and proposals**: see `runtime-cxtg/docs/ADR_log.md`'s `Spec` column: any entry marked `X`, in any of its tables, is a decision or proposal that could still require a change to the actual TG spec text. The `X` clears once the entry no longer would change the spec, or once the spec — and this document — already reflects it (`runtime-cxtg/docs/adr/_schema.md` § Spec-impact flag).
